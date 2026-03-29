@@ -23,7 +23,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.0.3"
+OXLOG_VERSION = "1.0.2"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -993,7 +993,9 @@ def update_check():
     if not update_url:
         return jsonify({"ok": False, "msg": "No update URL configured. Set it in Settings."})
     try:
-        r = requests.get(update_url, timeout=10)
+        import time
+        cache_bust = update_url + ("&" if "?" in update_url else "?") + "t=" + str(int(time.time()))
+        r = requests.get(cache_bust, timeout=10)
         if not r.ok:
             return jsonify({"ok": False, "msg": f"Failed to check: HTTP {r.status_code}"})
         data = r.json()
