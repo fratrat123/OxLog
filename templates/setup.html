@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OxLog — Setup</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui, sans-serif; color: #ccc; }
+.card { background: #1a1a1a; border: 0.5px solid #333; border-radius: 12px; padding: 32px; width: 420px; }
+.brand { text-align: center; margin-bottom: 28px; }
+.brand-name { font-size: 22px; font-weight: 500; color: #7ec87e; letter-spacing: 0.05em; }
+.brand-sub { font-size: 11px; color: #444; margin-top: 2px; letter-spacing: 0.1em; text-transform: uppercase; }
+.step { display: none; }
+.step.active { display: block; }
+.step-title { font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 6px; }
+.step-desc { font-size: 12px; color: #555; margin-bottom: 16px; line-height: 1.5; }
+.field { margin-bottom: 14px; }
+.field-label { font-size: 11px; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.field input { width: 100%; padding: 9px 12px; background: #0d0d0d; border: 0.5px solid #2a2a2a; border-radius: 8px; color: #ccc; font-size: 13px; font-family: system-ui, sans-serif; }
+.field input:focus { outline: none; border-color: #5a9e5a; }
+.field input::placeholder { color: #333; }
+.pin-display { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #444; background: transparent; transition: background 0.1s; }
+.pin-dot.filled { background: #5a9e5a; border-color: #5a9e5a; }
+.numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 240px; margin: 0 auto 16px; }
+.num-btn { padding: 12px; background: #222; border: 0.5px solid #2e2e2e; border-radius: 8px; color: #ccc; font-size: 16px; cursor: pointer; text-align: center; user-select: none; }
+.num-btn:hover { background: #2a2a2a; color: #fff; }
+.num-btn:active { background: #1e2a1e; color: #7ec87e; }
+.num-btn.clear { color: #666; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.btn-primary { background: #1e2e1e; border: 0.5px solid #5a9e5a; color: #7ec87e; }
+.btn-primary:hover { background: #243424; }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.btn-secondary { background: #1a1a1a; border: 0.5px solid #2a2a2a; color: #777; }
+.btn-secondary:hover { color: #aaa; border-color: #444; }
+.progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #2a2a2a; }
+.progress-dot.active { background: #5a9e5a; }
+.progress-dot.done { background: #3a6a3a; }
+.error { color: #c87e7e; font-size: 12px; margin-top: 8px; }
+.optional { color: #333; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.browse-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:50; align-items:center; justify-content:center; }
+.browse-modal { background:#1a1a1a; border:0.5px solid #333; border-radius:12px; width:400px; max-height:70vh; display:flex; flex-direction:column; }
+.browse-header { padding:14px 16px; border-bottom:0.5px solid #2a2a2a; display:flex; align-items:center; justify-content:space-between; }
+.browse-path { font-family:'Consolas',monospace; font-size:11px; color:#7ec87e; word-break:break-all; padding:8px 16px; background:#0d0d0d; border-bottom:0.5px solid #2a2a2a; }
+.browse-list { flex:1; overflow-y:auto; padding:6px 0; }
+.browse-item { padding:8px 16px; font-size:13px; color:#888; cursor:pointer; display:flex; align-items:center; gap:8px; }
+.browse-item:hover { background:#1e1e1e; color:#ccc; }
+.browse-item .folder-icon { color:#5a9e5a; font-size:11px; flex-shrink:0; }
+.browse-footer { padding:12px 16px; border-top:0.5px solid #2a2a2a; display:flex; gap:8px; justify-content:flex-end; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-name">OxLog</div>
+    <div class="brand-sub">First-Time Setup</div>
+  </div>
+  <div class="progress">
+    <div class="progress-dot active" id="prog0"></div>
+    <div class="progress-dot" id="prog1"></div>
+    <div class="progress-dot" id="prog2"></div>
+  </div>
+
+  <!-- Step 1: PIN -->
+  <div class="step active" id="step0">
+    <div class="step-title">Choose a PIN</div>
+    <div class="step-desc">This 4-digit PIN will protect access to OxLog.</div>
+    <div class="pin-display">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="numpad">
+      <div class="num-btn" onclick="addDigit('1')">1</div>
+      <div class="num-btn" onclick="addDigit('2')">2</div>
+      <div class="num-btn" onclick="addDigit('3')">3</div>
+      <div class="num-btn" onclick="addDigit('4')">4</div>
+      <div class="num-btn" onclick="addDigit('5')">5</div>
+      <div class="num-btn" onclick="addDigit('6')">6</div>
+      <div class="num-btn" onclick="addDigit('7')">7</div>
+      <div class="num-btn" onclick="addDigit('8')">8</div>
+      <div class="num-btn" onclick="addDigit('9')">9</div>
+      <div class="num-btn clear" onclick="clearPin()">CLR</div>
+      <div class="num-btn" onclick="addDigit('0')">0</div>
+      <div class="num-btn clear" onclick="backspace()">&#9003;</div>
+    </div>
+    <div class="step-desc" style="text-align:center;margin:0;" id="pinLabel">Enter 4 digits</div>
+  </div>
+
+  <!-- Step 2: Paths -->
+  <div class="step" id="step1">
+    <div class="step-title">Server Paths</div>
+    <div class="step-desc" id="detectStatus">Scanning for Oxide installation...</div>
+    <div class="field">
+      <div class="field-label">Oxide Plugin Directory</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="setupPluginDir" placeholder="C:\rustserver\oxide\plugins" style="flex:1;" />
+        <button class="btn btn-secondary" style="padding:8px 12px;flex-shrink:0;" onclick="openBrowse('setupPluginDir')">Browse</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Backup Directory <span class="optional">(optional)</span></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="setupArchiveDir" placeholder="C:\rustserver\OxLog\backup" style="flex:1;" />
+        <button class="btn btn-secondary" style="padding:8px 12px;flex-shrink:0;" onclick="openBrowse('setupArchiveDir')">Browse</button>
+      </div>
+    </div>
+    <div id="detectResults" style="display:none;margin-bottom:4px;"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(0)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(2)">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 3: RCON -->
+  <div class="step" id="step2">
+    <div class="step-title">RCON <span class="optional">(optional)</span></div>
+    <div class="step-desc">Connect to your server's console. You can configure this later in Settings.</div>
+    <div class="field">
+      <div class="field-label">RCON Password</div>
+      <input type="text" id="setupRconPass" placeholder="Your +rcon.password value" />
+    </div>
+    <div class="field">
+      <div class="field-label">RCON Port</div>
+      <input type="text" id="setupRconPort" placeholder="28016" value="28016" />
+    </div>
+    <div id="setupError" class="error" style="display:none;"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">Back</button>
+      <button class="btn btn-primary" onclick="finishSetup()">Finish Setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="browse-overlay" id="browseOverlay">
+  <div class="browse-modal">
+    <div class="browse-header">
+      <div style="font-size:14px;font-weight:500;color:#ccc;">Select Folder</div>
+      <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="browseUp()" id="browseUpBtn">Up</button>
+    </div>
+    <div class="browse-path" id="browsePath">Loading...</div>
+    <div class="browse-list" id="browseList"></div>
+    <div class="browse-footer">
+      <button class="btn btn-secondary" onclick="closeBrowse()">Cancel</button>
+      <button class="btn btn-primary" onclick="selectBrowse()">Select This Folder</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 0;
+let pin = '';
+
+function updateDots() {
+  for (let i = 0; i < 4; i++)
+    document.getElementById('d'+i).classList.toggle('filled', i < pin.length);
+}
+
+function addDigit(d) {
+  if (pin.length >= 4) return;
+  pin += d;
+  updateDots();
+  if (pin.length === 4) {
+    document.getElementById('pinLabel').textContent = 'PIN set: ****';
+    document.getElementById('pinLabel').style.color = '#5a9e5a';
+    setTimeout(() => goStep(1), 400);
+  }
+}
+
+function clearPin() { pin = ''; updateDots(); document.getElementById('pinLabel').textContent = 'Enter 4 digits'; document.getElementById('pinLabel').style.color = '#555'; }
+function backspace() { pin = pin.slice(0, -1); updateDots(); document.getElementById('pinLabel').textContent = 'Enter 4 digits'; document.getElementById('pinLabel').style.color = '#555'; }
+
+let detected = false;
+
+function goStep(n) {
+  if (n === 1 && pin.length < 4) return;
+  if (n === 2) {
+    const dir = document.getElementById('setupPluginDir').value.trim();
+    if (!dir) { document.getElementById('setupPluginDir').style.borderColor = '#9e5a5a'; return; }
+  }
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById('prog'+i);
+    dot.className = 'progress-dot' + (i === n ? ' active' : (i < n ? ' done' : ''));
+  }
+  currentStep = n;
+  if (n === 1 && !detected) detectOxide();
+}
+
+function detectOxide() {
+  detected = true;
+  document.getElementById('detectStatus').textContent = 'Scanning for Oxide installation...';
+  document.getElementById('detectStatus').style.color = '#555';
+  fetch('/api/detect/oxide').then(r => r.json()).then(d => {
+    if (d.ok && d.paths && d.paths.length > 0) {
+      // Auto-fill the first result
+      document.getElementById('setupPluginDir').value = d.paths[0];
+      document.getElementById('detectStatus').textContent = 'Found Oxide installation automatically.';
+      document.getElementById('detectStatus').style.color = '#5a9e5a';
+      if (d.paths.length > 1) {
+        // Show alternatives
+        var el = document.getElementById('detectResults');
+        el.style.display = 'block';
+        el.innerHTML = '<div style="font-size:11px;color:#555;margin-bottom:6px;">Other installations found:</div>' +
+          d.paths.slice(1).map(function(p) {
+            return '<div style="font-size:11px;color:#7e7ec8;cursor:pointer;padding:2px 0;" onclick="document.getElementById(\'setupPluginDir\').value=\'' + p.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\'">' + p + '</div>';
+          }).join('');
+      }
+    } else {
+      document.getElementById('detectStatus').textContent = 'Could not auto-detect. Browse or type the path to your oxide/plugins folder.';
+      document.getElementById('detectStatus').style.color = '#555';
+    }
+  }).catch(function() {
+    document.getElementById('detectStatus').textContent = 'Tell OxLog where your Oxide plugins live and where to store backups.';
+    document.getElementById('detectStatus').style.color = '#555';
+  });
+}
+
+function finishSetup() {
+  const pluginDir = document.getElementById('setupPluginDir').value.trim();
+  const archiveDir = document.getElementById('setupArchiveDir').value.trim();
+  const rconPass = document.getElementById('setupRconPass').value.trim();
+  const rconPort = parseInt(document.getElementById('setupRconPort').value.trim()) || 28016;
+
+  fetch('/api/setup', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      pin: pin,
+      plugin_dir: pluginDir,
+      archive_dir: archiveDir || '',
+      rcon_password: rconPass,
+      rcon_port: rconPort
+    })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      window.location.href = '/login';
+    } else {
+      document.getElementById('setupError').textContent = d.msg || 'Setup failed.';
+      document.getElementById('setupError').style.display = 'block';
+    }
+  }).catch(err => {
+    document.getElementById('setupError').textContent = 'Error: ' + err.message;
+    document.getElementById('setupError').style.display = 'block';
+  });
+}
+
+let browseTarget = '';
+let browseCurrent = '';
+let browseParent = '';
+
+function openBrowse(inputId) {
+  browseTarget = inputId;
+  const current = document.getElementById(inputId).value.trim();
+  loadBrowse(current || '');
+  document.getElementById('browseOverlay').style.display = 'flex';
+}
+
+function closeBrowse() {
+  document.getElementById('browseOverlay').style.display = 'none';
+}
+
+function selectBrowse() {
+  if (browseCurrent) {
+    document.getElementById(browseTarget).value = browseCurrent;
+  }
+  closeBrowse();
+}
+
+function browseUp() {
+  if (browseParent !== undefined) loadBrowse(browseParent);
+}
+
+function loadBrowse(path) {
+  document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#333;font-size:12px;">Loading...</div>';
+  fetch('/api/browse', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ path: path })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#9e5a5a;font-size:12px;">' + (d.msg || 'Error') + '</div>';
+      return;
+    }
+    browseCurrent = d.path;
+    browseParent = d.parent;
+    document.getElementById('browsePath').textContent = d.path || 'Drives';
+    document.getElementById('browseUpBtn').style.display = d.path ? '' : 'none';
+    const list = document.getElementById('browseList');
+    if (!d.dirs.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:#333;font-size:12px;">No subfolders</div>';
+      return;
+    }
+    list.innerHTML = d.dirs.map(dir => {
+      const full = d.path ? (d.path.endsWith('\\') ? d.path + dir : d.path + '\\' + dir) : dir;
+      return '<div class="browse-item" onclick="loadBrowse(\'' + full.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><span class="folder-icon">\u25B6</span>' + dir + '</div>';
+    }).join('');
+  }).catch(err => {
+    document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#9e5a5a;font-size:12px;">Error: ' + err.message + '</div>';
+  });
+}
+</script>
+</body>
+</html>

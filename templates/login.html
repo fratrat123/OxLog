@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OxLog</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui, sans-serif; }
+.card { background: #1a1a1a; border: 0.5px solid #333; border-radius: 12px; padding: 32px; width: 280px; }
+.brand { text-align: center; margin-bottom: 24px; }
+.brand-name { font-size: 22px; font-weight: 500; color: #7ec87e; letter-spacing: 0.05em; }
+.brand-sub { font-size: 11px; color: #444; margin-top: 2px; letter-spacing: 0.1em; text-transform: uppercase; }
+.pin-display { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #444; background: transparent; transition: background 0.1s; }
+.pin-dot.filled { background: #5a9e5a; border-color: #5a9e5a; }
+.numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.num-btn { padding: 14px; background: #222; border: 0.5px solid #2e2e2e; border-radius: 8px; color: #ccc; font-size: 18px; cursor: pointer; text-align: center; user-select: none; }
+.num-btn:hover { background: #2a2a2a; color: #fff; }
+.num-btn:active { background: #1e2a1e; color: #7ec87e; }
+.num-btn.clear { color: #666; font-size: 13px; }
+.error { color: #c87e7e; font-size: 12px; text-align: center; margin-top: 12px; }
+input[name=pin] { display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-name">OxLog</div>
+    <div class="brand-sub">Oxide Plugin Changelog</div>
+  </div>
+  <div class="pin-display">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <form method="POST" id="pinForm">
+    <input type="hidden" name="pin" id="pinInput" />
+    <div class="numpad">
+      <div class="num-btn" onclick="addDigit('1')">1</div>
+      <div class="num-btn" onclick="addDigit('2')">2</div>
+      <div class="num-btn" onclick="addDigit('3')">3</div>
+      <div class="num-btn" onclick="addDigit('4')">4</div>
+      <div class="num-btn" onclick="addDigit('5')">5</div>
+      <div class="num-btn" onclick="addDigit('6')">6</div>
+      <div class="num-btn" onclick="addDigit('7')">7</div>
+      <div class="num-btn" onclick="addDigit('8')">8</div>
+      <div class="num-btn" onclick="addDigit('9')">9</div>
+      <div class="num-btn clear" onclick="clearPin()">CLR</div>
+      <div class="num-btn" onclick="addDigit('0')">0</div>
+      <div class="num-btn clear" onclick="backspace()">&#9003;</div>
+    </div>
+  </form>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+</div>
+<script>
+let pin = "";
+function updateDots() {
+  for (let i = 0; i < 4; i++)
+    document.getElementById("d"+i).classList.toggle("filled", i < pin.length);
+}
+function addDigit(d) {
+  if (pin.length >= 4) return;
+  pin += d;
+  updateDots();
+  if (pin.length === 4) {
+    document.getElementById("pinInput").value = pin;
+    document.getElementById("pinForm").submit();
+  }
+}
+function clearPin() { pin = ""; updateDots(); }
+function backspace() { pin = pin.slice(0, -1); updateDots(); }
+</script>
+</body>
+</html>
