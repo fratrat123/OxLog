@@ -1,0 +1,13 @@
+{
+  "version": "1.0.2",
+  "files": [
+    "OxLog.py",
+    "templates/index.html",
+    "templates/login.html",
+    "templates/setup.html",
+    "start.bat",
+    "install.bat"
+  ],
+  "base_url": "https://raw.githubusercontent.com/fratrat123/OxLog/main",
+  "notes": "Update splash screen, updater fixes"
+}
