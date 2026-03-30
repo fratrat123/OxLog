@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "files": [
     "OxLog.py",
     "templates/index.html",
@@ -9,5 +9,5 @@
     "install.bat"
   ],
   "base_url": "https://raw.githubusercontent.com/fratrat123/OxLog/main",
-  "notes": "Full plugin state snapshots (config + data), backup directory for versions"
+  "notes": "Auto-restart on update, full plugin state snapshots, backup dir for versions"
 }

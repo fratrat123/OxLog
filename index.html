@@ -1,0 +1,3318 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OxLog</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ace.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/theme-tomorrow_night.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #111;
+            font-family: system-ui, sans-serif;
+            color: #ccc;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .titlebar {
+            background: #0d0d0d;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 0.5px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            font-size: 15px;
+            font-weight: 500;
+            color: #7ec87e;
+            letter-spacing: 0.05em;
+        }
+
+        .logout {
+            font-size: 12px;
+            color: #555;
+            text-decoration: none;
+            padding: 4px 10px;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+        }
+
+            .logout:hover {
+                color: #aaa;
+                border-color: #444;
+            }
+
+        .body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 210px;
+            background: #141414;
+            border-right: 0.5px solid #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 12px 14px 8px;
+            font-size: 11px;
+            color: #555;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .plugin-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .group-divider {
+            padding: 8px 14px 4px;
+            font-size: 10px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-top: 0.5px solid #1e1e1e;
+            margin-top: 4px;
+        }
+
+        .plugin-item {
+            padding: 9px 14px;
+            font-size: 13px;
+            color: #888;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+            .plugin-item:hover {
+                background: #1e1e1e;
+                color: #ccc;
+            }
+
+            .plugin-item.active {
+                background: #1a2a1a;
+                color: #7ec87e;
+                border-left-color: #5a9e5a;
+            }
+
+        .plugin-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            flex-shrink: 0;
+        }
+
+        .plugin-item.active .plugin-dot, .plugin-item.has-webhook .plugin-dot {
+            background: #5a9e5a;
+        }
+
+        .sidebar-footer {
+            padding: 10px 12px;
+            border-top: 0.5px solid #2a2a2a;
+        }
+
+        .manage-btn {
+            width: 100%;
+            padding: 7px 10px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #555;
+            cursor: pointer;
+            text-align: center;
+        }
+
+            .manage-btn:hover {
+                color: #999;
+                border-color: #444;
+            }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            background: #0d0d0d;
+            border-bottom: 0.5px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+
+        .tab {
+            padding: 10px 18px;
+            font-size: 12px;
+            color: #555;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+            .tab:hover {
+                color: #aaa;
+            }
+
+            .tab.active {
+                color: #7ec87e;
+                border-bottom-color: #5a9e5a;
+            }
+
+        .panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+            .panel.active {
+                display: flex;
+            }
+
+        .placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .field-label {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        input[type=text], textarea {
+            width: 100%;
+            padding: 8px 10px;
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            color: #ccc;
+            font-size: 13px;
+            font-family: system-ui, sans-serif;
+        }
+
+            input:focus, textarea:focus {
+                outline: none;
+                border-color: #5a9e5a;
+            }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+            line-height: 1.5;
+        }
+
+        .version-parts {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+        }
+
+        .ver-part {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ver-label {
+            font-size: 10px;
+            color: #555;
+            text-transform: uppercase;
+        }
+
+        .ver-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ver-btn {
+            width: 26px;
+            height: 26px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            color: #777;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .ver-btn:hover {
+                color: #ccc;
+                border-color: #444;
+            }
+
+        .ver-num {
+            font-size: 16px;
+            font-weight: 500;
+            color: #7ec87e;
+            min-width: 22px;
+            text-align: center;
+        }
+
+        .ver-display {
+            font-size: 20px;
+            font-weight: 500;
+            color: #7ec87e;
+            padding-bottom: 2px;
+        }
+
+        .type-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 0.5px solid #2a2a2a;
+            color: #555;
+            cursor: pointer;
+            background: #0d0d0d;
+        }
+
+            .pill:hover {
+                border-color: #444;
+                color: #aaa;
+            }
+
+            .pill.active {
+                border-color: #5a9e5a;
+                color: #7ec87e;
+                background: #1a2a1a;
+            }
+
+        .action-btn {
+            padding: 9px 18px;
+            background: #1e2e1e;
+            border: 0.5px solid #5a9e5a;
+            border-radius: 8px;
+            color: #7ec87e;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+            .action-btn:hover {
+                background: #243424;
+            }
+
+        .secondary-btn {
+            padding: 8px 12px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            color: #777;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+            .secondary-btn:hover {
+                color: #aaa;
+                border-color: #444;
+            }
+
+        .status {
+            font-size: 12px;
+            padding: 7px 12px;
+            border-radius: 8px;
+        }
+
+            .status.ok {
+                background: #1a2a1a;
+                color: #7ec87e;
+                border: 0.5px solid #2a3a2a;
+            }
+
+            .status.err {
+                background: #2a1a1a;
+                color: #c87e7e;
+                border: 0.5px solid #3a2a2a;
+            }
+
+        .wh-row {
+            display: flex;
+            gap: 8px;
+        }
+
+            .wh-row input {
+                flex: 1;
+            }
+
+        .log-entry {
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+            .log-entry:hover {
+                border-color: #3a3a3a;
+            }
+
+        .log-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .log-ver {
+            color: #7ec87e;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .log-type {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            background: #1a2a1a;
+            color: #5a9e5a;
+            border: 0.5px solid #2a3a2a;
+        }
+
+        .log-ts {
+            color: #3a3a3a;
+            font-size: 11px;
+            margin-left: auto;
+        }
+
+        .log-plugin {
+            font-size: 11px;
+            color: #444;
+            margin-bottom: 4px;
+        }
+
+        .log-folder {
+            font-size: 10px;
+            color: #2a4a2a;
+            margin-top: 4px;
+        }
+
+        .empty {
+            color: #333;
+            font-size: 13px;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .plugin-card {
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+        }
+
+            .plugin-card:hover {
+                border-color: #3a3a3a;
+            }
+
+            .plugin-card.selected {
+                border-color: #5a9e5a;
+                background: #0f1f0f;
+            }
+
+        .plugin-card-check {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 0.5px solid #3a3a3a;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .plugin-card.selected .plugin-card-check {
+            background: #5a9e5a;
+            border-color: #5a9e5a;
+        }
+
+        .plugin-card-check-inner {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 2px;
+            display: none;
+        }
+
+        .plugin-card.selected .plugin-card-check-inner {
+            display: block;
+        }
+
+        .plugin-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .plugin-card-name {
+            font-size: 13px;
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .plugin-card.selected .plugin-card-name {
+            color: #7ec87e;
+        }
+
+        .plugin-card-meta {
+            font-size: 11px;
+            color: #555;
+            margin-top: 3px;
+        }
+
+        .plugin-card-ver {
+            font-size: 11px;
+            color: #3a6a3a;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .select-all-btn {
+            font-size: 12px;
+            color: #555;
+            cursor: pointer;
+            padding: 4px 8px;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            background: transparent;
+        }
+
+            .select-all-btn:hover {
+                color: #aaa;
+                border-color: #444;
+            }
+
+        .group-input {
+            width: 100%;
+            padding: 4px 8px;
+            background: #111;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            color: #888;
+            font-size: 11px;
+            font-family: system-ui, sans-serif;
+            margin-top: 6px;
+        }
+
+            .group-input:focus {
+                outline: none;
+                border-color: #5a9e5a;
+            }
+
+        .staged-bar {
+            display: none;
+            background: #1a2a1a;
+            border: 0.5px solid #2a3a2a;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 12px;
+            color: #7ec87e;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+            .staged-bar.visible {
+                display: flex;
+            }
+
+        .staged-bar-clear {
+            padding: 3px 10px;
+            background: transparent;
+            border: 0.5px solid #2a3a2a;
+            border-radius: 6px;
+            color: #5a9e5a;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+            .staged-bar-clear:hover {
+                border-color: #5a9e5a;
+                color: #7ec87e;
+            }
+
+        .code-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 60;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .code-modal {
+            background: #1a1a1a;
+            border: 0.5px solid #333;
+            border-radius: 12px;
+            width: 700px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .code-modal-header {
+            padding: 14px 20px;
+            border-bottom: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .code-modal-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .code-modal-stats {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .code-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 20px;
+        }
+
+        .code-modal-body pre {
+            margin: 0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #aaa;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        .code-modal-footer {
+            padding: 14px 20px;
+            border-top: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .paste-btn {
+            padding: 6px 12px;
+            background: #1a2a1a;
+            border: 0.5px solid #2a3a2a;
+            border-radius: 6px;
+            color: #5a9e5a;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+            .paste-btn:hover {
+                border-color: #5a9e5a;
+                color: #7ec87e;
+            }
+
+        .console-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .rcon-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        .rcon-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .rcon-dot.connected { background: #5a9e5a; }
+        .rcon-dot.connecting { background: #9e9e5a; }
+        .rcon-dot.error { background: #9e5a5a; }
+
+        .console-filter {
+            flex: 1;
+            padding: 6px 10px;
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 12px;
+            font-family: system-ui, sans-serif;
+        }
+
+            .console-filter:focus {
+                outline: none;
+                border-color: #5a9e5a;
+            }
+
+        .console-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .rcon-btn {
+            padding: 5px 10px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            color: #777;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+            .rcon-btn:hover {
+                color: #aaa;
+                border-color: #444;
+            }
+
+        .rcon-type-btn.active {
+            border-color: #5a9e5a;
+            color: #7ec87e !important;
+            background: #1a2a1a;
+        }
+
+        .rcon-btn.green {
+            background: #1a2a1a;
+            border-color: #2a3a2a;
+            color: #5a9e5a;
+        }
+
+            .rcon-btn.green:hover {
+                border-color: #5a9e5a;
+                color: #7ec87e;
+            }
+
+        .rcon-btn.red {
+            background: #2a1a1a;
+            border-color: #3a2a2a;
+            color: #9e5a5a;
+        }
+
+            .rcon-btn.red:hover {
+                border-color: #9e5a5a;
+                color: #c87e7e;
+            }
+
+        .console-output {
+            flex: 1;
+            background: #0a0a0a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            min-height: 0;
+        }
+
+        .console-line {
+            color: #888;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .console-line.warning { color: #c8c87e; }
+        .console-line.error { color: #c87e7e; }
+        .console-line.cmd { color: #7e7ec8; }
+        .console-line.system { color: #5a9e5a; }
+
+        .console-input-row {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .console-input {
+            flex: 1;
+            padding: 8px 10px;
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            color: #ccc;
+            font-size: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+            .console-input:focus {
+                outline: none;
+                border-color: #5a9e5a;
+            }
+
+        .diff-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 60;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .diff-modal {
+            background: #1a1a1a;
+            border: 0.5px solid #333;
+            border-radius: 12px;
+            width: 800px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .diff-modal-header {
+            padding: 14px 20px;
+            border-bottom: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .diff-modal-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .diff-modal-labels {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .diff-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .diff-modal-body pre {
+            margin: 0;
+            padding: 14px 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        .diff-line { color: #666; }
+        .diff-add { color: #7ec87e; background: rgba(90,158,90,0.08); }
+        .diff-del { color: #c87e7e; background: rgba(158,90,90,0.08); }
+        .diff-hunk { color: #7e7ec8; margin-top: 4px; }
+
+        .diff-modal-footer {
+            padding: 14px 20px;
+            border-top: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .diff-mode-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .diff-mode-btn {
+            padding: 5px 10px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 6px;
+            color: #777;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+            .diff-mode-btn:hover { color: #aaa; border-color: #444; }
+
+            .diff-mode-btn.active {
+                border-color: #5a9e5a;
+                color: #7ec87e;
+                background: #1a2a1a;
+            }
+
+        .browse-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 65;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .browse-modal {
+            background: #1a1a1a;
+            border: 0.5px solid #333;
+            border-radius: 12px;
+            width: 420px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .browse-header {
+            padding: 14px 16px;
+            border-bottom: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .browse-path {
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #7ec87e;
+            word-break: break-all;
+            padding: 8px 16px;
+            background: #0d0d0d;
+            border-bottom: 0.5px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+
+        .browse-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+            min-height: 150px;
+        }
+
+        .browse-item {
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #888;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .browse-item:hover {
+                background: #1e1e1e;
+                color: #ccc;
+            }
+
+        .browse-item .folder-icon {
+            color: #5a9e5a;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .browse-footer {
+            padding: 12px 16px;
+            border-top: 0.5px solid #2a2a2a;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .tour-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+        }
+
+        .tour-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            pointer-events: auto;
+        }
+
+        .tour-spotlight {
+            position: absolute;
+            border-radius: 8px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.75), 0 0 15px 3px rgba(126,200,126,0.5), inset 0 0 8px 2px rgba(126,200,126,0.15);
+            border: 1.5px solid rgba(126,200,126,0.6);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            background: rgba(126,200,126,0.04);
+        }
+
+        .tour-tooltip {
+            position: absolute;
+            background: #1a1a1a;
+            border: 0.5px solid #5a9e5a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            width: 300px;
+            z-index: 101;
+            transition: all 0.3s ease;
+        }
+
+        .tour-tooltip-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #7ec87e;
+            margin-bottom: 6px;
+        }
+
+        .tour-tooltip-desc {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 14px;
+        }
+
+        .tour-tooltip-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tour-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .tour-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2a2a2a;
+        }
+
+        .tour-dot.active { background: #5a9e5a; }
+        .tour-dot.done { background: #3a5a3a; }
+
+        .tour-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tour-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .tour-btn-skip {
+            background: transparent;
+            border: 0.5px solid #2a2a2a;
+            color: #555;
+        }
+
+            .tour-btn-skip:hover { color: #888; border-color: #444; }
+
+        .tour-btn-next {
+            background: #1e2e1e;
+            border: 0.5px solid #5a9e5a;
+            color: #7ec87e;
+        }
+
+            .tour-btn-next:hover { background: #243424; }
+
+        .tour-highlight {
+            color: #fff !important;
+        }
+
+        .tour-highlight * {
+            color: #fff !important;
+        }
+
+        .help-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-modal {
+            background: #1a1a1a;
+            border: 0.5px solid #333;
+            border-radius: 12px;
+            width: 560px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .help-header {
+            padding: 16px 24px;
+            border-bottom: 0.5px solid #2a2a2a;
+            font-size: 15px;
+            font-weight: 500;
+            color: #7ec87e;
+            flex-shrink: 0;
+        }
+
+        .help-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .help-section {
+            margin-bottom: 20px;
+        }
+
+        .help-section:last-child { margin-bottom: 0; }
+
+        .help-section-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #7ec87e;
+            margin-bottom: 8px;
+        }
+
+        .help-section-body {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.7;
+        }
+
+        .help-section-body code {
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .help-footer {
+            padding: 14px 24px;
+            border-top: 0.5px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .editor-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .editor-filetree {
+            width: 170px;
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .editor-filetree-header {
+            padding: 8px 12px;
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 0.5px solid #1e1e1e;
+        }
+
+        .editor-filetree-group {
+            padding: 6px 12px 2px;
+            font-size: 9px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 4px;
+        }
+
+        .editor-file-item {
+            padding: 5px 12px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+            .editor-file-item:hover {
+                background: #1a1a1a;
+                color: #aaa;
+            }
+
+            .editor-file-item.active {
+                background: #1a2a1a;
+                color: #7ec87e;
+            }
+
+        .editor-file-icon {
+            font-size: 10px;
+            flex-shrink: 0;
+            width: 12px;
+            text-align: center;
+        }
+
+        .editor-file-icon.cs { color: #5a9e5a; }
+        .editor-file-icon.json { color: #9e9e5a; }
+        .editor-file-icon.data { color: #5a7e9e; }
+
+        .search-input-row {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 9px 12px;
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            color: #ccc;
+            font-size: 13px;
+            font-family: system-ui, sans-serif;
+        }
+
+            .search-input:focus {
+                outline: none;
+                border-color: #5a9e5a;
+            }
+
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .search-file-group {
+            margin-bottom: 12px;
+        }
+
+        .search-file-header {
+            font-size: 12px;
+            font-weight: 500;
+            color: #7ec87e;
+            padding: 6px 0;
+            cursor: pointer;
+        }
+
+            .search-file-header:hover {
+                color: #aaffaa;
+            }
+
+        .search-match {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            padding: 2px 10px;
+            cursor: pointer;
+            display: flex;
+            gap: 10px;
+        }
+
+            .search-match:hover {
+                background: #1a2a1a;
+            }
+
+        .search-line-num {
+            color: #444;
+            min-width: 40px;
+            text-align: right;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .search-line-text {
+            color: #888;
+            white-space: pre;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-highlight {
+            color: #7ec87e;
+            background: rgba(126,200,126,0.15);
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
+        .search-stats {
+            font-size: 11px;
+            color: #444;
+            flex-shrink: 0;
+        }
+
+        .compile-popup {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 480px;
+            max-height: 300px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 10px;
+            z-index: 80;
+            flex-direction: column;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+
+            .compile-popup.visible {
+                display: flex;
+            }
+
+        .compile-header {
+            padding: 10px 14px;
+            border-bottom: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .compile-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .compile-status {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .compile-status.ok { color: #5a9e5a; }
+        .compile-status.err { color: #c87e7e; }
+        .compile-status.watching { color: #9e9e5a; }
+
+        .compile-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .compile-line { color: #888; }
+        .compile-line.error { color: #c87e7e; }
+        .compile-line.warning { color: #c8c87e; }
+        .compile-line.success { color: #5a9e5a; }
+
+        .compile-close {
+            cursor: pointer;
+            color: #444;
+            font-size: 14px;
+            padding: 2px 6px;
+            border: none;
+            background: none;
+        }
+
+            .compile-close:hover { color: #888; }
+
+        .update-splash {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .update-splash-box {
+            text-align: center;
+            padding: 40px 50px;
+            background: #1a1a1a;
+            border: 0.5px solid #2a3a2a;
+            border-radius: 14px;
+        }
+
+        .editor-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .editor-info {
+            font-size: 11px;
+            color: #444;
+        }
+
+        .editor-modified {
+            color: #c8c87e;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="titlebar">
+        <span class="brand">OxLog <span style="font-size:10px;color:#333;font-weight:normal;">v{{ version }}</span></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <button class="logout" style="cursor:pointer;background:none;" onclick="document.getElementById('helpOverlay').style.display='flex'">Help</button>
+            <button class="logout" style="cursor:pointer;background:none;" onclick="replayTour()">Tour</button>
+            <button class="logout" style="cursor:pointer;background:none;" onclick="runBackup()">Backup</button>
+            <button class="logout" style="cursor:pointer;background:none;" onclick="oxideSnapshot()">Oxide Snapshot</button>
+            <a href="/logout" class="logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="body">
+        <div class="sidebar">
+            <div class="sidebar-header">Tracked Plugins</div>
+            <div class="plugin-list" id="pluginList"></div>
+            <div class="sidebar-footer">
+                <div class="manage-btn" onclick="openManage()" id="btnManage">Manage Plugins</div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="tabs">
+                <div class="tab active" data-tab="update" onclick="switchTab('update')" id="tabUpdate">Log Update</div>
+                <div class="tab" data-tab="editor" onclick="switchTab('editor')" id="tabEditor">Editor</div>
+                <div class="tab" data-tab="webhook" onclick="switchTab('webhook')" id="tabWebhook">Webhook</div>
+                <div class="tab" data-tab="history" onclick="switchTab('history')" id="tabHistory">History</div>
+                <div class="tab" data-tab="console" onclick="switchTab('console')" id="tabConsole">Console</div>
+                <div class="tab" data-tab="search" onclick="switchTab('search')" id="tabSearch">Search</div>
+                <div class="tab" data-tab="settings" onclick="switchTab('settings')" id="tabSettings">Settings</div>
+            </div>
+
+            <div class="panel active" id="panel-update">
+                <div class="placeholder" id="ph-update">Select a plugin to log an update</div>
+                <div id="updateForm" style="display:none;flex-direction:column;gap:16px;">
+                    <div style="background:#0d0d0d;border:0.5px solid #2a2a2a;border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:13px;font-weight:500;color:#7ec87e;" id="selectedPluginName"></div>
+                            <div style="font-size:11px;color:#555;margin-top:3px;" id="selectedPluginMeta"></div>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="secondary-btn" id="openProjectBtn" style="display:none;" onclick="openProjectURL()">Open Project</button>
+                            <button class="secondary-btn" onclick="openInVS()">Open in VS</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">Version</div>
+                        <div class="version-parts">
+                            <div class="ver-part">
+                                <div class="ver-label">Major</div>
+                                <div class="ver-controls">
+                                    <button class="ver-btn" onclick="bump('major',-1)">-</button>
+                                    <span class="ver-num" id="vMajor">1</span>
+                                    <button class="ver-btn" onclick="bump('major',1)">+</button>
+                                </div>
+                            </div>
+                            <div class="ver-part">
+                                <div class="ver-label">Minor</div>
+                                <div class="ver-controls">
+                                    <button class="ver-btn" onclick="bump('minor',-1)">-</button>
+                                    <span class="ver-num" id="vMinor">0</span>
+                                    <button class="ver-btn" onclick="bump('minor',1)">+</button>
+                                </div>
+                            </div>
+                            <div class="ver-part">
+                                <div class="ver-label">Patch</div>
+                                <div class="ver-controls">
+                                    <button class="ver-btn" onclick="bump('patch',-1)">-</button>
+                                    <span class="ver-num" id="vPatch">0</span>
+                                    <button class="ver-btn" onclick="bump('patch',1)">+</button>
+                                </div>
+                            </div>
+                            <div class="ver-part">
+                                <div class="ver-label">Current</div>
+                                <div class="ver-display" id="vDisplay">v1.0.0</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">Update type</div>
+                        <div class="type-pills">
+                            <div class="pill active" data-type="Bugfix" onclick="selectType(this)">Bugfix</div>
+                            <div class="pill" data-type="Feature" onclick="selectType(this)">Feature</div>
+                            <div class="pill" data-type="Refactor" onclick="selectType(this)">Refactor</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button class="paste-btn" onclick="pasteCode()">Paste Code</button>
+                    </div>
+                    <div class="staged-bar" id="stagedBar">
+                        <span id="stagedInfo"></span>
+                        <div style="display:flex;gap:6px;">
+                            <button class="staged-bar-clear" onclick="previewStagedDiff()">Preview Diff</button>
+                            <button class="staged-bar-clear" onclick="clearStagedCode()">Clear</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">Notes</div>
+                        <textarea id="notes" placeholder="Describe what changed..."></textarea>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <button class="action-btn" onclick="submitUpdate()">Log &amp; Push to Discord</button>
+                        <span id="updateStatus"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-editor">
+                <div class="placeholder" id="ph-editor">Select a plugin to edit its code</div>
+                <div id="editorForm" style="display:none;flex:1;flex-direction:column;gap:0;overflow:hidden;">
+                    <div class="editor-bar" style="padding:8px 0;margin-bottom:6px;">
+                        <div>
+                            <span style="font-size:13px;font-weight:500;color:#7ec87e;" id="editorPluginName"></span>
+                            <span style="font-size:11px;color:#555;margin-left:8px;" id="editorFileName"></span>
+                            <span class="editor-info editor-modified" id="editorModified" style="display:none;margin-left:8px;">modified</span>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <span class="editor-info" id="editorStats"></span>
+                            <button class="secondary-btn" style="padding:5px 10px;font-size:11px;" onclick="loadEditorFile()">Reload</button>
+                            <button class="secondary-btn" style="padding:5px 10px;font-size:11px;" onclick="saveEditorCode()">Save</button>
+                            <button class="action-btn" style="padding:5px 12px;font-size:11px;" id="editorSaveLogBtn" onclick="saveAndLog()">Save &amp; Log</button>
+                            <button class="action-btn" style="padding:5px 12px;font-size:11px;" id="editorSaveReloadBtn" onclick="saveAndReload()">Save &amp; Reload</button>
+                            <span id="editorStatus"></span>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex:1;min-height:0;gap:0;">
+                        <div class="editor-filetree" id="editorFileTree">
+                            <div class="editor-filetree-header">FILES</div>
+                            <div id="editorFileList"></div>
+                        </div>
+                        <div class="editor-wrap">
+                            <div id="editorCode" style="width:100%;height:100%;border-radius:0 8px 8px 0;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-webhook">
+                <div class="placeholder" id="ph-webhook">Select a plugin to configure its webhook</div>
+                <div id="webhookForm" style="display:none;flex-direction:column;gap:16px;">
+                    <div style="background:#0d0d0d;border:0.5px solid #2a2a2a;border-radius:8px;padding:10px 14px;">
+                        <div style="font-size:13px;font-weight:500;color:#7ec87e;" id="whPluginName"></div>
+                        <div style="font-size:11px;color:#555;margin-top:3px;" id="whPluginMeta"></div>
+                    </div>
+                    <div>
+                        <div class="field-label">Discord Webhook URL</div>
+                        <div class="wh-row">
+                            <input type="text" id="whUrl" placeholder="https://discord.com/api/webhooks/..." />
+                            <button class="secondary-btn" onclick="testWebhook()">Test</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">Channel label (optional)</div>
+                        <input type="text" id="whChannel" placeholder="#plugin-updates" />
+                    </div>
+                    <div>
+                        <div class="field-label">Project URL (optional)</div>
+                        <input type="text" id="whProjectUrl" placeholder="https://claude.ai/project/..." />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <button class="action-btn" onclick="saveWebhook()">Save Webhook</button>
+                        <span id="webhookStatus"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-history">
+                <div id="historyContent"><div class="empty">No updates logged yet.</div></div>
+            </div>
+
+            <div class="panel" id="panel-console" style="gap:10px;">
+                <div class="console-toolbar">
+                    <div class="rcon-status">
+                        <div class="rcon-dot" id="rconDot"></div>
+                        <span id="rconStatusText">Disconnected</span>
+                    </div>
+                    <input type="text" class="console-filter" id="consoleFilter" placeholder="Filter output..." oninput="filterConsole()" />
+                    <div style="display:flex;gap:4px;flex-shrink:0;">
+                        <button class="rcon-btn rcon-type-btn active" data-filter="" onclick="setTypeFilter(this)">All</button>
+                        <button class="rcon-btn rcon-type-btn" data-filter="error" onclick="setTypeFilter(this)" style="color:#9e5a5a;">Errors</button>
+                        <button class="rcon-btn rcon-type-btn" data-filter="warning" onclick="setTypeFilter(this)" style="color:#9e9e5a;">Warn</button>
+                    </div>
+                    <div class="console-actions">
+                        <span id="rconPluginActions" style="display:none;">
+                            <button class="rcon-btn green" onclick="rconPluginCmd('o.load')">Load</button>
+                            <button class="rcon-btn" onclick="rconPluginCmd('o.unload')">Unload</button>
+                            <button class="rcon-btn green" onclick="rconPluginCmd('o.reload')">Reload</button>
+                        </span>
+                        <button class="rcon-btn green" id="rconConnectBtn" onclick="rconConnect()">Connect</button>
+                        <button class="rcon-btn red" id="rconDisconnectBtn" style="display:none;" onclick="rconDisconnect()">Disconnect</button>
+                        <button class="rcon-btn" id="scrollLockBtn" onclick="toggleScrollLock()">Scroll Lock</button>
+                        <button class="rcon-btn" onclick="clearConsole()">Clear</button>
+                    </div>
+                </div>
+                <div class="console-output" id="consoleOutput"></div>
+                <div class="console-input-row">
+                    <input type="text" class="console-input" id="consoleInput" placeholder="Enter RCON command..." onkeydown="if(event.key==='Enter')sendRconCmd()" disabled />
+                    <button class="rcon-btn green" onclick="sendRconCmd()" id="rconSendBtn" disabled>Send</button>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-search" style="gap:10px;">
+                <div class="search-input-row">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search all plugin files... (e.g. effect path, hook name, shortname)" onkeydown="if(event.key==='Enter')runSearch()" />
+                    <button class="action-btn" style="padding:8px 16px;flex-shrink:0;" onclick="runSearch()">Search</button>
+                </div>
+                <div class="search-stats" id="searchStats"></div>
+                <div class="search-results" id="searchResults">
+                    <div class="empty">Search across all tracked .cs files</div>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-settings" style="max-width:500px;">
+                <div style="font-size:14px;font-weight:500;color:#ccc;margin-bottom:4px;">Settings</div>
+                <div style="font-size:11px;color:#444;margin-bottom:16px;">Changes are saved immediately.</div>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <div class="field-label">PIN (4 digits)</div>
+                        <input type="text" id="settingsPin" maxlength="4" placeholder="****" style="max-width:120px;" />
+                    </div>
+                    <div>
+                        <div class="field-label">Oxide Plugin Directory</div>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="settingsPluginDir" placeholder="C:\rustserver\oxide\plugins" style="flex:1;" />
+                            <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsPluginDir')">Browse</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">Backup Directory <span style="color:#333;font-size:9px;">(snapshots, backups &amp; oxide snapshots)</span></div>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="settingsArchiveDir" placeholder="C:\rustserver\OxLog\backup" style="flex:1;" />
+                            <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsArchiveDir')">Browse</button>
+                        </div>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">RCON</div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">RCON Password</div>
+                                <input type="text" id="settingsRconPass" placeholder="Your +rcon.password value" />
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <div style="flex:1;">
+                                    <div class="field-label">RCON Host <span style="color:#333;font-size:9px;">(blank = auto)</span></div>
+                                    <input type="text" id="settingsRconHost" placeholder="127.0.0.1" />
+                                </div>
+                                <div style="width:100px;">
+                                    <div class="field-label">Port</div>
+                                    <input type="text" id="settingsRconPort" placeholder="28016" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <button class="action-btn" onclick="saveSettings()">Save Settings</button>
+                        <button class="secondary-btn" onclick="replayTour()">Replay Tour</button>
+                        <span id="settingsStatus"></span>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Updates</div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">Update URL <span style="color:#333;font-size:9px;">(version.json URL — leave blank to use default)</span></div>
+                                <input type="text" id="settingsUpdateUrl" placeholder="https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json" />
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button class="secondary-btn" onclick="checkForUpdate()">Check for Updates</button>
+                                <span id="updateCheckStatus" style="font-size:11px;color:#555;"></span>
+                            </div>
+                            <div id="updateAvailable" style="display:none;background:#1a2a1a;border:0.5px solid #2a3a2a;border-radius:8px;padding:12px 14px;">
+                                <div style="font-size:12px;color:#7ec87e;margin-bottom:6px;" id="updateVersionInfo"></div>
+                                <div style="font-size:11px;color:#888;margin-bottom:10px;" id="updateNotes"></div>
+                                <button class="action-btn" style="font-size:11px;padding:6px 14px;" onclick="applyUpdate()">Download &amp; Apply Update</button>
+                                <span id="updateApplyStatus" style="font-size:11px;color:#555;margin-left:8px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="manageOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:50;align-items:flex-start;justify-content:center;padding-top:40px;">
+        <div style="background:#1a1a1a;border:0.5px solid #333;border-radius:12px;width:580px;max-height:80vh;display:flex;flex-direction:column;">
+            <div style="padding:16px 20px;border-bottom:0.5px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:14px;font-weight:500;color:#ccc;">Manage Plugins</div>
+                    <div style="font-size:11px;color:#555;margin-top:2px;" id="scanPath"></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button class="select-all-btn" onclick="toggleSelectAll()">Select all</button>
+                    <button class="secondary-btn" onclick="rescan()">Rescan</button>
+                </div>
+            </div>
+            <div style="padding:14px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;" id="scanResults">
+                <div class="empty">Scanning...</div>
+            </div>
+            <div style="padding:14px 20px;border-top:0.5px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:12px;color:#555;" id="selectedCount">0 selected</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="secondary-btn" onclick="closeManage()">Cancel</button>
+                    <button class="action-btn" onclick="saveManage()">Save &amp; Apply</button>
+                    <span id="manageStatus"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-modal-overlay" id="codeModal">
+        <div class="code-modal">
+            <div class="code-modal-header">
+                <div class="code-modal-title">Code Preview</div>
+                <div class="code-modal-stats" id="codeStats"></div>
+            </div>
+            <div class="code-modal-body">
+                <pre id="codePreview"></pre>
+            </div>
+            <div class="code-modal-footer">
+                <button class="secondary-btn" onclick="closeCodeModal()">Cancel</button>
+                <button class="action-btn" onclick="useThisCode()">Use This Code</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-modal-overlay" id="clipboardHelpModal">
+        <div class="code-modal" style="width:520px;">
+            <div class="code-modal-header">
+                <div class="code-modal-title">Clipboard Access Required</div>
+            </div>
+            <div class="code-modal-body" style="padding:20px;">
+                <div style="font-size:13px;color:#ccc;line-height:1.7;">
+                    <p style="margin-bottom:12px;">Your browser blocked clipboard access because this page isn't served over HTTPS.</p>
+                    <p style="margin-bottom:12px;font-weight:500;color:#7ec87e;">To fix this in Chrome:</p>
+                    <div style="background:#0d0d0d;border:0.5px solid #2a2a2a;border-radius:8px;padding:14px;margin-bottom:14px;">
+                        <div style="margin-bottom:8px;"><span style="color:#5a9e5a;font-weight:500;">1.</span> Copy this URL into a new tab:</div>
+                        <div style="background:#111;border:0.5px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:'Consolas',monospace;font-size:12px;color:#7e7ec8;margin-bottom:12px;cursor:pointer;word-break:break-all;" onclick="navigator.clipboard.writeText('chrome://flags/#unsafely-treat-insecure-origin-as-secure').catch(()=>{})" title="Click to copy">chrome://flags/#unsafely-treat-insecure-origin-as-secure</div>
+                        <div style="margin-bottom:8px;"><span style="color:#5a9e5a;font-weight:500;">2.</span> Add this origin to the text field:</div>
+                        <div id="clipboardHelpOrigin" style="background:#111;border:0.5px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:'Consolas',monospace;font-size:12px;color:#7ec87e;margin-bottom:12px;"></div>
+                        <div style="margin-bottom:0;"><span style="color:#5a9e5a;font-weight:500;">3.</span> Set the flag to <span style="color:#7ec87e;">Enabled</span> and relaunch Chrome.</div>
+                    </div>
+                    <p style="font-size:11px;color:#555;">After relaunch, Paste Code will work directly.</p>
+                </div>
+            </div>
+            <div class="code-modal-footer">
+                <button class="action-btn" onclick="closeClipboardHelp()">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="diff-modal-overlay" id="diffModal">
+        <div class="diff-modal">
+            <div class="diff-modal-header">
+                <div class="diff-modal-title" id="diffTitle">Diff</div>
+                <div class="diff-modal-labels" id="diffLabels"></div>
+            </div>
+            <div class="diff-modal-body">
+                <pre id="diffContent"></pre>
+            </div>
+            <div class="diff-modal-footer">
+                <div class="diff-mode-btns">
+                    <button class="diff-mode-btn active" id="diffModeLive" onclick="switchDiffMode('live')">vs Live</button>
+                    <button class="diff-mode-btn" id="diffModePrev" onclick="switchDiffMode('previous')">vs Previous</button>
+                </div>
+                <button class="secondary-btn" onclick="closeDiffModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="browse-overlay" id="browseOverlay">
+        <div class="browse-modal">
+            <div class="browse-header">
+                <div style="font-size:14px;font-weight:500;color:#ccc;">Select Folder</div>
+                <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="browseUp()" id="browseUpBtn">Up</button>
+            </div>
+            <div class="browse-path" id="browsePath">Loading...</div>
+            <div class="browse-list" id="browseList"></div>
+            <div class="browse-footer">
+                <button class="secondary-btn" onclick="closeBrowse()">Cancel</button>
+                <button class="action-btn" onclick="selectBrowse()">Select This Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tour-overlay" id="tourOverlay">
+        <div class="tour-backdrop" onclick="tourNext()"></div>
+        <div class="tour-spotlight" id="tourSpotlight"></div>
+        <div class="tour-tooltip" id="tourTooltip">
+            <div class="tour-tooltip-title" id="tourTitle"></div>
+            <div class="tour-tooltip-desc" id="tourDesc"></div>
+            <div class="tour-tooltip-footer">
+                <div class="tour-dots" id="tourDots"></div>
+                <div class="tour-btns">
+                    <button class="tour-btn tour-btn-skip" onclick="tourEnd()">Skip</button>
+                    <button class="tour-btn tour-btn-next" id="tourNextBtn" onclick="tourNext()">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-modal">
+            <div class="help-header">Getting Started</div>
+            <div class="help-body">
+                <div class="help-section">
+                    <div class="help-section-title">Version Auto-Increment</div>
+                    <div class="help-section-body">
+                        After you Log &amp; Push, the patch version automatically increments by 1. For example, if you log v1.2.0, the version bumper resets to v1.2.1 ready for your next change. You can still manually bump Major or Minor at any time — the auto-increment only touches the patch number.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Creating a Discord Webhook</div>
+                    <div class="help-section-body">
+                        In Discord, right-click a channel → <strong style="color:#ccc;">Edit Channel</strong> → <strong style="color:#ccc;">Integrations</strong> → <strong style="color:#ccc;">Webhooks</strong> → <strong style="color:#ccc;">New Webhook</strong>. Name it something like "OxLog" and copy the webhook URL. Paste it into the Webhook tab for each plugin. You can use one webhook for all plugins or separate webhooks per channel.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Paste Code Workflow</div>
+                    <div class="help-section-body">
+                        Copy your updated plugin code to the clipboard, click <strong style="color:#ccc;">Paste Code</strong>, review it, then click <strong style="color:#ccc;">Use This Code</strong>. A green bar appears confirming the code is staged. When you hit Log &amp; Push, the code is written to the live <code>.cs</code> file, the <code>[Info]</code> version is updated, a snapshot is saved, and the changelog is pushed to Discord — all in one click.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Snapshots &amp; Reverting</div>
+                    <div class="help-section-body">
+                        Every log entry snapshots the full <code>.cs</code> file along with a <code>notes.txt</code>. In the History tab, click <strong style="color:#ccc;">Diff</strong> to see exactly what changed, or <strong style="color:#ccc;">Revert</strong> to roll back. Reverting snapshots the current live file first (so you never lose anything), then restores the selected version.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">RCON Console</div>
+                    <div class="help-section-body">
+                        Set your server's <code>+rcon.password</code> and port in Settings, then click <strong style="color:#ccc;">Connect</strong> in the Console tab. Oxide auto-compiles when files change, but you can manually <strong style="color:#ccc;">Load</strong>, <strong style="color:#ccc;">Unload</strong>, or <strong style="color:#ccc;">Reload</strong> plugins. Use the filter to show only output from a specific plugin, or click <strong style="color:#ccc;">Errors</strong> to isolate problems.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Keyboard Navigation</div>
+                    <div class="help-section-body">
+                        Press any letter key to jump to the first plugin starting with that letter. Press the same letter again to cycle through matches. Works anywhere except when typing in an input field.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Remote Access &amp; Clipboard</div>
+                    <div class="help-section-body">
+                        If Paste Code shows a clipboard error over Tailscale or LAN, go to <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>, add your OxLog URL (e.g. <code>http://100.x.x.x:5000</code>), enable it, and relaunch Chrome. OxLog will guide you through this automatically if it happens.
+                    </div>
+                </div>
+            </div>
+            <div class="help-footer">
+                <button class="secondary-btn" onclick="replayTour()">Replay Tour</button>
+                <button class="action-btn" onclick="closeHelp()">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="update-splash" id="updateSplash" style="display:none;">
+        <div class="update-splash-box">
+            <div style="font-size:22px;color:#7ec87e;margin-bottom:6px;">OxLog Updated</div>
+            <div style="font-size:14px;color:#ccc;margin-bottom:4px;">Now running <span style="color:#7ec87e;font-weight:500;">v{{ version }}</span></div>
+            <div style="font-size:11px;color:#555;margin-bottom:20px;">Update applied automatically on restart.</div>
+            <button class="action-btn" onclick="document.getElementById('updateSplash').style.display='none'">Got It</button>
+        </div>
+    </div>
+
+    <div class="compile-popup" id="compilePopup">
+        <div class="compile-header">
+            <div class="compile-title" id="compileTitle">Compile Output</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="rcon-btn" id="compileCopyBtn" style="display:none;font-size:10px;padding:3px 8px;" onclick="copyCompileErrors()">Copy Errors</button>
+                <span class="compile-status watching" id="compileStatus">Watching...</span>
+                <button class="compile-close" onclick="closeCompilePopup()">&times;</button>
+            </div>
+        </div>
+        <div class="compile-body" id="compileBody"></div>
+    </div>
+
+    <script>
+let plugins = {{ plugins | tojson }};
+let selected = null;
+let ver = [1,0,0];
+let updateType = 'Bugfix';
+let scanData = [];
+let groups = [];
+let lastKey = '';
+let lastKeyMatches = [];
+let lastKeyIndex = 0;
+let pendingCode = null;
+
+function pluginItemHTML(p, lastUpdated) {
+  return `<div class="plugin-item ${selected===p.idx?'active':''} ${p.webhook?'has-webhook':''}" onclick="selectPlugin(${p.idx})">
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+      ${lastUpdated && lastUpdated[p.name]
+        ? `<span style="font-size:10px;color:#3a5a3a;">${lastUpdated[p.name].split(' ')[0]}</span>`
+        : '<span style="font-size:10px;color:#333;">no updates yet</span>'
+      }
+    </div>
+    <div class="plugin-dot"></div>
+  </div>`;
+}
+
+function renderSidebar(lastUpdated) {
+  const sorted = [...plugins].map((p, i) => ({ ...p, idx: i }));
+  if (lastUpdated) {
+    sorted.sort((a, b) => {
+      const ta = lastUpdated[a.name] || '';
+      const tb = lastUpdated[b.name] || '';
+      return tb.localeCompare(ta);
+    });
+  }
+  if (sorted.length === 0) {
+    document.getElementById('pluginList').innerHTML =
+      '<div style="padding:20px 14px;font-size:12px;color:#333;text-align:center;">No plugins tracked.<br>Click Manage Plugins.</div>';
+    return;
+  }
+  const grouped = {};
+  const ungrouped = [];
+  sorted.forEach(p => {
+    if (p.group) {
+      if (!grouped[p.group]) grouped[p.group] = [];
+      grouped[p.group].push(p);
+    } else {
+      ungrouped.push(p);
+    }
+  });
+  let html = '';
+  let firstGroup = true;
+  Object.keys(grouped).sort().forEach(group => {
+    html += `<div class="group-divider${firstGroup?' style="border-top:none;margin-top:0;"':''}">${group}</div>`;
+    firstGroup = false;
+    grouped[group].forEach(p => { html += pluginItemHTML(p, lastUpdated); });
+  });
+  if (ungrouped.length) {
+    if (Object.keys(grouped).length > 0) {
+      html += `<div class="group-divider" style="color:#333;">Ungrouped</div>`;
+    }
+    ungrouped.forEach(p => { html += pluginItemHTML(p, lastUpdated); });
+  }
+  document.getElementById('pluginList').innerHTML = html;
+}
+
+function loadSidebar() {
+  fetch('/api/recent').then(r => r.json()).then(d => {
+    renderSidebar(d.ok ? d.last_updated : null);
+  });
+}
+
+function selectPlugin(i) {
+  selected = i;
+  const p = plugins[i];
+  ver = [...p.version];
+  pendingCode = null;
+  document.getElementById('stagedBar').classList.remove('visible');
+  loadSidebar();
+  updateVerDisplay();
+  document.getElementById('ph-update').style.display = 'none';
+  document.getElementById('updateForm').style.display = 'flex';
+  document.getElementById('ph-webhook').style.display = 'none';
+  document.getElementById('webhookForm').style.display = 'flex';
+  document.getElementById('ph-editor').style.display = 'none';
+  document.getElementById('editorForm').style.display = 'flex';
+  document.getElementById('editorPluginName').textContent = p.name;
+  document.getElementById('editorFileName').textContent = p.file || '';
+  document.getElementById('selectedPluginName').textContent = p.name;
+  document.getElementById('selectedPluginMeta').textContent = (p.author ? 'by ' + p.author : '') + (p.file ? '  ·  ' + p.file : '');
+  document.getElementById('whPluginName').textContent = p.name;
+  document.getElementById('whPluginMeta').textContent = (p.author ? 'by ' + p.author : '') + (p.file ? '  ·  ' + p.file : '');
+  document.getElementById('whUrl').value = p.webhook || '';
+  document.getElementById('whChannel').value = p.channel || '';
+  document.getElementById('whProjectUrl').value = p.project_url || '';
+  document.getElementById('openProjectBtn').style.display = p.project_url ? 'block' : 'none';
+  document.getElementById('updateStatus').textContent = '';
+  document.getElementById('webhookStatus').textContent = '';
+  if (document.getElementById('panel-history').classList.contains('active')) loadHistory();
+  if (document.getElementById('panel-editor').classList.contains('active')) loadEditorCode();
+  updateRconPluginActions();
+  setTimeout(() => {
+    const activeItem = document.querySelector('.plugin-item.active');
+    if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, 50);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+tab));
+  if (tab === 'history') loadHistory();
+  if (tab === 'console') updateRconPluginActions();
+  if (tab === 'settings') loadSettings();
+  if (tab === 'editor') { loadEditorCode(); if (aceEditor) setTimeout(function() { aceEditor.resize(); }, 50); }
+}
+
+function bump(part, dir) {
+  const idx = part==='major'?0:part==='minor'?1:2;
+  ver[idx] = Math.max(0, ver[idx] + dir);
+  updateVerDisplay();
+}
+
+function updateVerDisplay() {
+  document.getElementById('vMajor').textContent = ver[0];
+  document.getElementById('vMinor').textContent = ver[1];
+  document.getElementById('vPatch').textContent = ver[2];
+  document.getElementById('vDisplay').textContent = 'v'+ver.join('.');
+}
+
+function selectType(el) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  updateType = el.dataset.type;
+}
+
+function submitUpdate() {
+  if (selected === null) return;
+  const notes = document.getElementById('notes').value.trim();
+  if (!notes) { showStatus('updateStatus', 'Please add some notes.', false); return; }
+  const payload = { plugin: plugins[selected].name, version: 'v'+ver.join('.'), type: updateType, notes };
+  const hadCode = !!pendingCode;
+  const pushPluginName = plugins[selected].name;
+  if (pendingCode) payload.code = pendingCode;
+  fetch('/api/log', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => {
+    if (!r.ok) throw new Error('Server returned ' + r.status);
+    return r.json();
+  }).then(d => {
+    if (d.ok) {
+      plugins[selected].version = [...d.next_version];
+      ver = [...d.next_version];
+      updateVerDisplay();
+      const codeMsg = pendingCode ? ' Code pushed.' : '';
+      pendingCode = null;
+      document.getElementById('stagedBar').classList.remove('visible');
+      showStatus('updateStatus', (d.discord ? 'Logged and pushed to Discord.' : 'Logged. Discord push failed — check webhook.') + codeMsg, d.discord);
+      document.getElementById('notes').value = '';
+      loadSidebar();
+      if (hadCode) {
+        startCompileWatch(pushPluginName);
+      }
+    } else {
+      showStatus('updateStatus', d.msg || 'Log failed.', false);
+    }
+  }).catch(err => {
+    showStatus('updateStatus', 'Error: ' + err.message, false);
+  });
+}
+
+function openInVS() {
+  if (selected === null) return;
+  fetch('/api/open', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) showStatus('updateStatus', d.msg || 'Could not open file.', false);
+  });
+}
+
+function openProjectURL() {
+  const url = plugins[selected]?.project_url;
+  if (url) window.open(url, '_blank');
+}
+
+function openSnapshot(folder) {
+  fetch('/api/open/snapshot', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ folder })
+  });
+}
+
+function saveWebhook() {
+  if (selected === null) return;
+  const webhook = document.getElementById('whUrl').value.trim();
+  const channel = document.getElementById('whChannel').value.trim();
+  const project_url = document.getElementById('whProjectUrl').value.trim();
+  fetch('/api/webhook', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name, webhook, channel, project_url })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      plugins[selected].webhook = webhook;
+      plugins[selected].channel = channel;
+      plugins[selected].project_url = project_url;
+      document.getElementById('openProjectBtn').style.display = project_url ? 'block' : 'none';
+      showStatus('webhookStatus', 'Webhook saved.', true);
+      loadSidebar();
+    }
+  });
+}
+
+function testWebhook() {
+  const webhook = document.getElementById('whUrl').value.trim();
+  if (!webhook) { showStatus('webhookStatus', 'Enter a webhook URL first.', false); return; }
+  fetch('/api/webhook/test', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected]?.name || 'OxLog', webhook })
+  }).then(r => r.json()).then(d => {
+    showStatus('webhookStatus', d.ok ? 'Test message sent.' : 'Failed — check the URL.', d.ok);
+  });
+}
+
+function loadHistory() {
+    const plugin = selected !== null ? plugins[selected].name : '';
+    fetch('/api/history?plugin=' + encodeURIComponent(plugin))
+        .then(r => r.json()).then(entries => {
+            const el = document.getElementById('historyContent');
+            if (!entries.length) { el.innerHTML = '<div class="empty">No updates logged yet.</div>'; return; }
+            el.innerHTML = entries.map(e => `
+<div class="log-entry">
+    <div class="log-plugin">${e.plugin}</div>
+    <div class="log-head">
+    <span class="log-ver">${e.version}</span>
+    <span class="log-type">${e.type}</span>
+    <span class="log-ts">${e.ts}</span>
+    </div>
+    ${e.notes ? `<div style="font-size:12px;color:#666;margin-top:6px;line-height:1.5;">${e.notes}</div>` : ''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <div class="log-folder" style="cursor:pointer;margin:0;" onclick="openSnapshot('${e.folder.replace(/\\/g, '\\\\')}')">open snapshot folder</div>
+        <div style="display:flex;gap:6px;">
+            <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="showDiff('${e.plugin}','${e.version}','${e.folder.replace(/\\/g, '\\\\')}')">Diff</button>
+            <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="revertToSnapshot('${e.plugin}','${e.version}','${e.folder.replace(/\\/g, '\\\\')}')">Revert</button>
+        </div>
+    </div>
+</div>`).join('');
+        });
+}
+
+function revertToSnapshot(pluginName, version, folder) {
+  if (!confirm('Revert ' + pluginName + ' to ' + version + '?\n\nThis will snapshot the current live file, then restore this version as live.')) return;
+  fetch('/api/revert', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: pluginName, version: version, folder: folder })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      if (selected !== null && plugins[selected].name === pluginName) {
+        plugins[selected].version = d.version;
+        ver = [...d.version];
+        updateVerDisplay();
+      }
+      loadHistory();
+      loadSidebar();
+    } else {
+      alert(d.msg || 'Revert failed.');
+    }
+  });
+}
+
+function openManage() {
+  document.getElementById('manageOverlay').style.display = 'flex';
+  fetch('/api/groups').then(r => r.json()).then(d => {
+    groups = d.ok ? d.groups : [];
+    rescan();
+  });
+}
+
+function closeManage() {
+  document.getElementById('manageOverlay').style.display = 'none';
+}
+
+function rescan() {
+  document.getElementById('scanResults').innerHTML = '<div class="empty">Scanning...</div>';
+  fetch('/api/scan').then(r => r.json()).then(d => {
+    if (!d.ok) return;
+    scanData = d.plugins;
+    document.getElementById('scanPath').textContent = d.plugin_dir + ' — ' + scanData.length + ' .cs files found';
+    renderScanResults();
+  });
+}
+
+function renderScanResults() {
+  const el = document.getElementById('scanResults');
+  if (!scanData.length) { el.innerHTML = '<div class="empty">No .cs files found.</div>'; return; }
+  el.innerHTML = scanData.map((p, i) => `
+    <div class="plugin-card ${p.tracked ? 'selected' : ''}" onclick="togglePlugin(${i})">
+      <div class="plugin-card-check"><div class="plugin-card-check-inner"></div></div>
+      <div class="plugin-card-info">
+        <div class="plugin-card-name">${p.name}</div>
+        <div class="plugin-card-meta">by ${p.author} &nbsp;·&nbsp; ${p.file}</div>
+        ${p.tracked ? `<input class="group-input" list="groupList" placeholder="Group (optional)" value="${p.group||''}" onclick="event.stopPropagation()" oninput="scanData[${i}].group=this.value" />` : ''}
+      </div>
+      <div class="plugin-card-ver">v${p.version.join('.')}</div>
+    </div>`).join('') +
+    `<datalist id="groupList">${groups.map(g => `<option value="${g}">`).join('')}</datalist>`;
+  updateSelectedCount();
+}
+
+function togglePlugin(i) {
+  scanData[i].tracked = !scanData[i].tracked;
+  renderScanResults();
+}
+
+function toggleSelectAll() {
+  const allSelected = scanData.every(p => p.tracked);
+  scanData.forEach(p => p.tracked = !allSelected);
+  renderScanResults();
+}
+
+function updateSelectedCount() {
+  const n = scanData.filter(p => p.tracked).length;
+  document.getElementById('selectedCount').textContent = n + ' selected';
+}
+
+function saveManage() {
+  const selected_plugins = scanData.filter(p => p.tracked);
+  const allGroups = [...new Set(selected_plugins.map(p => p.group).filter(Boolean))];
+  fetch('/api/manage/save', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugins: selected_plugins, groups: allGroups })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      plugins = selected_plugins.map(p => {
+        const existing = plugins.find(ep => ep.name === p.name);
+        return existing ? { ...existing, group: p.group } : { name: p.name, author: p.author, file: p.file, group: p.group||'', webhook: '', channel: '', project_url: '', version: p.version };
+      });
+      loadSidebar();
+      closeManage();
+      selected = null;
+      document.getElementById('updateForm').style.display = 'none';
+      document.getElementById('ph-update').style.display = 'flex';
+      document.getElementById('webhookForm').style.display = 'none';
+      document.getElementById('ph-webhook').style.display = 'flex';
+      document.getElementById('editorForm').style.display = 'none';
+      document.getElementById('ph-editor').style.display = 'flex';
+    }
+  });
+}
+
+function showStatus(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.className = 'status ' + (ok ? 'ok' : 'err');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; el.className = ''; }, 4000);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('manageOverlay').style.display === 'flex') return;
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  const key = e.key.toLowerCase();
+  if (!/^[a-z]$/.test(key)) return;
+  if (key !== lastKey) {
+    lastKey = key;
+    lastKeyMatches = plugins.map((p, i) => ({ ...p, idx: i }))
+      .filter(p => p.name.toLowerCase().startsWith(key));
+    lastKeyIndex = 0;
+  } else {
+    lastKeyIndex = (lastKeyIndex + 1) % lastKeyMatches.length;
+  }
+  if (lastKeyMatches.length > 0) selectPlugin(lastKeyMatches[lastKeyIndex].idx);
+});
+
+async function pasteCode() {
+  if (selected === null) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) {
+      showStatus('updateStatus', 'Clipboard is empty.', false);
+      return;
+    }
+    const newLines = text.split('\n').length;
+    const newChars = text.length;
+    document.getElementById('codePreview').textContent = text;
+    document.getElementById('codeStats').textContent = 'Loading comparison...';
+    document.getElementById('codeModal').style.display = 'flex';
+
+    // Fetch current file for comparison
+    fetch('/api/plugin/code', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ plugin: plugins[selected].name })
+    }).then(r => r.json()).then(d => {
+      let stats = newLines + ' lines \u00b7 ' + newChars.toLocaleString() + ' chars';
+      if (d.ok && d.code) {
+        const curLines = d.code.split('\n').length;
+        const diff = newLines - curLines;
+        const diffStr = diff > 0 ? '+' + diff : diff === 0 ? '\u00b10' : '' + diff;
+        const diffColor = diff > 0 ? '#5a9e5a' : diff < 0 ? '#c87e7e' : '#888';
+        stats = 'Current: ' + curLines + ' lines  \u2192  Pasting: ' + newLines + ' lines  <span style="color:' + diffColor + '">(' + diffStr + ')</span>';
+      }
+      document.getElementById('codeStats').innerHTML = stats;
+    }).catch(function() {
+      document.getElementById('codeStats').textContent = newLines + ' lines \u00b7 ' + newChars.toLocaleString() + ' chars';
+    });
+  } catch (e) {
+    document.getElementById('clipboardHelpOrigin').textContent = window.location.origin;
+    document.getElementById('clipboardHelpModal').style.display = 'flex';
+  }
+}
+
+function closeCodeModal() {
+  document.getElementById('codeModal').style.display = 'none';
+}
+
+function closeClipboardHelp() {
+  document.getElementById('clipboardHelpModal').style.display = 'none';
+}
+
+function useThisCode() {
+  pendingCode = document.getElementById('codePreview').textContent;
+  const newLines = pendingCode.split('\n').length;
+  document.getElementById('stagedBar').classList.add('visible');
+  closeCodeModal();
+  updateStagedInfo(newLines);
+}
+
+function updateStagedInfo(newLines) {
+  const el = document.getElementById('stagedInfo');
+  el.textContent = newLines + ' lines staged \u2014 will push on Log & Push';
+  if (selected === null) return;
+  fetch('/api/plugin/code', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name })
+  }).then(r => r.json()).then(d => {
+    if (d.ok && d.code) {
+      const curLines = d.code.split('\n').length;
+      const diff = newLines - curLines;
+      const diffStr = diff > 0 ? '+' + diff : diff === 0 ? '\u00b10' : '' + diff;
+      const diffColor = diff > 0 ? '#5a9e5a' : diff < 0 ? '#c87e7e' : '#7ec87e';
+      el.innerHTML = 'Current: ' + curLines + ' lines \u2192 Staged: ' + newLines + ' lines <span style="color:' + diffColor + '">(' + diffStr + ')</span> \u2014 will push on Log & Push';
+    }
+  }).catch(function() {});
+}
+
+function clearStagedCode() {
+  pendingCode = null;
+  document.getElementById('stagedBar').classList.remove('visible');
+}
+
+// Editor (Ace)
+let aceEditor = null;
+let editorOriginal = '';
+let editorDirty = false;
+let editorCurrentFile = null; // {name, path, type}
+let editorFiles = null;
+let editorDirs = null;
+
+function initAceEditor() {
+  if (aceEditor) return;
+  aceEditor = ace.edit('editorCode');
+  aceEditor.setTheme('ace/theme/tomorrow_night');
+  aceEditor.session.setMode('ace/mode/csharp');
+  aceEditor.setOptions({
+    fontSize: '13px',
+    fontFamily: "'Consolas', 'Courier New', monospace",
+    showPrintMargin: false,
+    tabSize: 4,
+    useSoftTabs: true,
+    wrap: false,
+    scrollPastEnd: 0.5
+  });
+  aceEditor.session.on('change', function() {
+    editorDirty = aceEditor.getValue() !== editorOriginal;
+    document.getElementById('editorModified').style.display = editorDirty ? 'inline' : 'none';
+    updateEditorStats();
+  });
+  aceEditor.commands.addCommand({
+    name: 'save',
+    bindKey: { win: 'Ctrl-S', mac: 'Cmd-S' },
+    exec: function() { saveEditorCode(); }
+  });
+}
+
+function loadEditorCode() {
+  if (selected === null) return;
+  initAceEditor();
+  // Load file tree first
+  fetch('/api/plugin/files', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) return;
+    editorFiles = d.files;
+    editorDirs = d.dirs || {};
+    renderFileTree();
+    // Auto-open the .cs file
+    if (d.files.plugin && d.files.plugin.length > 0) {
+      openEditorFile(d.files.plugin[0]);
+    }
+  });
+}
+
+function loadEditorFile() {
+  if (editorCurrentFile) {
+    openEditorFile(editorCurrentFile);
+  } else {
+    loadEditorCode();
+  }
+}
+
+function renderFileTree() {
+  if (!editorFiles) return;
+  const list = document.getElementById('editorFileList');
+  let html = '';
+  function groupHeader(label, dirKey) {
+    var dir = editorDirs && editorDirs[dirKey] ? editorDirs[dirKey].replace(/\\/g, '\\\\').replace(/'/g, "\\'") : '';
+    return '<div class="editor-filetree-group" style="display:flex;align-items:center;justify-content:space-between;">' +
+      '<span>' + label + '</span>' +
+      (dir ? '<span style="cursor:pointer;color:#333;font-size:9px;" onclick="openDir(\'' + dir + '\')" title="Open folder">\u{1F4C2}</span>' : '') +
+      '</div>';
+  }
+  if (editorFiles.plugin && editorFiles.plugin.length) {
+    html += groupHeader('Plugin', 'plugin');
+    editorFiles.plugin.forEach(function(f) {
+      const active = editorCurrentFile && editorCurrentFile.path === f.path ? ' active' : '';
+      html += '<div class="editor-file-item' + active + '" onclick="openEditorFileByPath(\'' + f.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" title="' + escapeHtml(f.name) + '"><span class="editor-file-icon cs">\u25C6</span>' + escapeHtml(f.name) + '</div>';
+    });
+  }
+  if (editorFiles.config && editorFiles.config.length) {
+    html += groupHeader('Config', 'config');
+    editorFiles.config.forEach(function(f) {
+      const active = editorCurrentFile && editorCurrentFile.path === f.path ? ' active' : '';
+      html += '<div class="editor-file-item' + active + '" onclick="openEditorFileByPath(\'' + f.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" title="' + escapeHtml(f.name) + '"><span class="editor-file-icon json">\u25C7</span>' + escapeHtml(f.name) + '</div>';
+    });
+  }
+  if (editorFiles.data && editorFiles.data.length) {
+    html += groupHeader('Data', 'data');
+    editorFiles.data.forEach(function(f) {
+      const active = editorCurrentFile && editorCurrentFile.path === f.path ? ' active' : '';
+      html += '<div class="editor-file-item' + active + '" onclick="openEditorFileByPath(\'' + f.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" title="' + escapeHtml(f.name) + '"><span class="editor-file-icon data">\u25C7</span>' + escapeHtml(f.name) + '</div>';
+    });
+  }
+  if (!html) html = '<div style="padding:12px;font-size:11px;color:#333;text-align:center;">No files found</div>';
+  list.innerHTML = html;
+}
+
+function openDir(dir) {
+  fetch('/api/open/snapshot', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ folder: dir })
+  });
+}
+
+function openEditorFileByPath(path) {
+  if (!editorFiles) return;
+  var all = [].concat(editorFiles.plugin || [], editorFiles.config || [], editorFiles.data || []);
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].path === path) {
+      openEditorFile(all[i]);
+      return;
+    }
+  }
+}
+
+function openEditorFile(fileObj) {
+  if (!aceEditor) initAceEditor();
+  editorCurrentFile = fileObj;
+  document.getElementById('editorFileName').textContent = fileObj.name;
+  document.getElementById('editorModified').style.display = 'none';
+  document.getElementById('editorStats').textContent = 'Loading...';
+  editorDirty = false;
+
+  // Set Ace mode
+  var mode = fileObj.type === 'cs' ? 'ace/mode/csharp' : 'ace/mode/json';
+  aceEditor.session.setMode(mode);
+
+  // Show/hide Save & Log (only for .cs files)
+  document.getElementById('editorSaveLogBtn').style.display = fileObj.type === 'cs' ? '' : 'none';
+  document.getElementById('editorSaveReloadBtn').style.display = fileObj.type !== 'cs' ? '' : 'none';
+
+  // Update file tree active state
+  renderFileTree();
+
+  aceEditor.setValue('', -1);
+  fetch('/api/plugin/code', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name, filepath: fileObj.path })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('editorStats').textContent = d.msg || 'Failed to load';
+      return;
+    }
+    aceEditor.setValue(d.code, -1);
+    aceEditor.clearSelection();
+    aceEditor.moveCursorTo(0, 0);
+    editorOriginal = d.code;
+    editorDirty = false;
+    document.getElementById('editorModified').style.display = 'none';
+    updateEditorStats();
+    setTimeout(function() { aceEditor.resize(); }, 50);
+  }).catch(err => {
+    document.getElementById('editorStats').textContent = 'Error: ' + err.message;
+  });
+}
+
+function updateEditorStats() {
+  if (!aceEditor) return;
+  const lines = aceEditor.session.getLength();
+  const chars = aceEditor.getValue().length;
+  document.getElementById('editorStats').textContent = lines + ' lines \u00b7 ' + chars.toLocaleString() + ' chars';
+}
+
+function saveEditorCode() {
+  if (selected === null || !aceEditor || !editorCurrentFile) return;
+  const code = aceEditor.getValue();
+  if (!code.trim()) { showStatus('editorStatus', 'Nothing to save.', false); return; }
+  var payload = { plugin: plugins[selected].name, code: code };
+  // For non-.cs files, pass filepath directly
+  if (editorCurrentFile.type !== 'cs') {
+    payload.filepath = editorCurrentFile.path;
+  }
+  fetch('/api/plugin/save', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      editorOriginal = code;
+      editorDirty = false;
+      document.getElementById('editorModified').style.display = 'none';
+      showStatus('editorStatus', 'Saved.', true);
+    } else {
+      showStatus('editorStatus', d.msg || 'Save failed.', false);
+    }
+  }).catch(err => {
+    showStatus('editorStatus', 'Error: ' + err.message, false);
+  });
+}
+
+function saveAndLog() {
+  if (selected === null || !aceEditor) return;
+  const code = aceEditor.getValue();
+  if (!code.trim()) { showStatus('editorStatus', 'Nothing to save.', false); return; }
+  pendingCode = code;
+  const lines = aceEditor.session.getLength();
+  document.getElementById('stagedBar').classList.add('visible');
+  updateStagedInfo(lines);
+  switchTab('update');
+  showStatus('updateStatus', 'Code staged from editor. Fill in notes and Log & Push.', true);
+}
+
+function saveAndReload() {
+  if (selected === null || !aceEditor || !editorCurrentFile) return;
+  const code = aceEditor.getValue();
+  if (!code.trim()) { showStatus('editorStatus', 'Nothing to save.', false); return; }
+  var payload = { plugin: plugins[selected].name, code: code };
+  if (editorCurrentFile.type !== 'cs') payload.filepath = editorCurrentFile.path;
+  fetch('/api/plugin/save', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      editorOriginal = code;
+      editorDirty = false;
+      document.getElementById('editorModified').style.display = 'none';
+      if (rconWs && rconWs.readyState === 1) {
+        rconCmd('o.reload ' + plugins[selected].name);
+        showStatus('editorStatus', 'Saved & reloading plugin.', true);
+      } else {
+        showStatus('editorStatus', 'Saved. Connect RCON to auto-reload.', true);
+      }
+    } else {
+      showStatus('editorStatus', d.msg || 'Save failed.', false);
+    }
+  }).catch(err => {
+    showStatus('editorStatus', 'Error: ' + err.message, false);
+  });
+}
+
+// RCON
+let rconWs = null;
+let rconMessages = [];
+let rconCmdId = 1;
+let rconConfig = null;
+let rconTypeFilter = '';
+let rconAutoReconnect = false;
+let rconReconnectTimer = null;
+let consoleScrollLock = false;
+
+function updateRconPluginActions() {
+  const el = document.getElementById('rconPluginActions');
+  if (el) el.style.display = selected !== null ? 'inline' : 'none';
+}
+
+function rconConnect() {
+  if (rconWs && rconWs.readyState <= 1) return;
+  if (rconReconnectTimer) { clearTimeout(rconReconnectTimer); rconReconnectTimer = null; }
+  rconAutoReconnect = true;
+  fetch('/api/rcon/config').then(r => r.json()).then(d => {
+    if (!d.ok) {
+      rconLog('RCON not configured — set rcon_password in config.json', 'error');
+      return;
+    }
+    rconConfig = d;
+    const host = (!d.host || d.host === '127.0.0.1' || d.host === 'localhost') ? window.location.hostname : d.host;
+    const url = 'ws://' + host + ':' + d.port + '/' + d.password;
+    setRconStatus('connecting', 'Connecting...');
+    try {
+      rconWs = new WebSocket(url);
+    } catch (e) {
+      setRconStatus('error', 'Connection failed');
+      rconLog('WebSocket error: ' + e.message, 'error');
+      return;
+    }
+    rconWs.onopen = function() {
+      setRconStatus('connected', 'Connected');
+      rconLog('Connected to RCON', 'system');
+      document.getElementById('consoleInput').disabled = false;
+      document.getElementById('rconSendBtn').disabled = false;
+      document.getElementById('rconConnectBtn').style.display = 'none';
+      document.getElementById('rconDisconnectBtn').style.display = '';
+    };
+    rconWs.onmessage = function(e) {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.Message && msg.Message.trim()) {
+          const type = msg.Type === 'Warning' ? 'warning' : msg.Type === 'Error' ? 'error' : '';
+          rconLog(msg.Message, type);
+          if (compileWatchCallback) compileWatchCallback(msg);
+        }
+      } catch (err) {
+        rconLog(e.data, '');
+      }
+    };
+    rconWs.onclose = function() {
+      setRconStatus('', 'Disconnected');
+      rconLog('Disconnected from RCON', 'system');
+      document.getElementById('consoleInput').disabled = true;
+      document.getElementById('rconSendBtn').disabled = true;
+      document.getElementById('rconConnectBtn').style.display = '';
+      document.getElementById('rconDisconnectBtn').style.display = 'none';
+      rconWs = null;
+      if (rconAutoReconnect) {
+        setRconStatus('connecting', 'Reconnecting in 5s...');
+        rconReconnectTimer = setTimeout(function() { rconConnect(); }, 5000);
+      }
+    };
+    rconWs.onerror = function() {
+      setRconStatus('error', 'Connection error');
+    };
+  });
+}
+
+function rconDisconnect() {
+  rconAutoReconnect = false;
+  if (rconReconnectTimer) { clearTimeout(rconReconnectTimer); rconReconnectTimer = null; }
+  if (rconWs) rconWs.close();
+}
+
+function rconCmd(cmd) {
+  if (!rconWs || rconWs.readyState !== 1) {
+    rconLog('Not connected to RCON', 'error');
+    return;
+  }
+  rconWs.send(JSON.stringify({ Identifier: rconCmdId++, Message: cmd, Name: 'OxLog' }));
+  rconLog('> ' + cmd, 'cmd');
+}
+
+function rconPluginCmd(prefix) {
+  if (selected === null) return;
+  rconCmd(prefix + ' ' + plugins[selected].name);
+}
+
+function sendRconCmd() {
+  const input = document.getElementById('consoleInput');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  rconCmd(cmd);
+  input.value = '';
+}
+
+function rconLog(text, type) {
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  rconMessages.push({ text, type, ts });
+  if (rconMessages.length > 2000) rconMessages = rconMessages.slice(-1500);
+  renderConsole();
+}
+
+function renderConsole() {
+  const el = document.getElementById('consoleOutput');
+  const filter = document.getElementById('consoleFilter').value.toLowerCase();
+  let filtered = rconMessages;
+  if (rconTypeFilter) filtered = filtered.filter(m => m.type === rconTypeFilter);
+  if (filter) filtered = filtered.filter(m => m.text.toLowerCase().includes(filter));
+  const wasAtBottom = !consoleScrollLock && (el.scrollTop + el.clientHeight >= el.scrollHeight - 30);
+  el.innerHTML = filtered.map(m =>
+    '<div class="console-line' + (m.type ? ' ' + m.type : '') + '"><span style="color:#333;margin-right:8px;">' + m.ts + '</span>' + escapeHtml(m.text) + '</div>'
+  ).join('');
+  if (wasAtBottom) el.scrollTop = el.scrollHeight;
+}
+
+function toggleScrollLock() {
+  consoleScrollLock = !consoleScrollLock;
+  var btn = document.getElementById('scrollLockBtn');
+  btn.classList.toggle('active', consoleScrollLock);
+  btn.style.borderColor = consoleScrollLock ? '#9e9e5a' : '';
+  btn.style.color = consoleScrollLock ? '#c8c87e' : '';
+  if (!consoleScrollLock) {
+    var el = document.getElementById('consoleOutput');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function clearConsole() {
+  rconMessages = [];
+  renderConsole();
+}
+
+function setTypeFilter(btn) {
+  rconTypeFilter = btn.dataset.filter;
+  document.querySelectorAll('.rcon-type-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderConsole();
+}
+
+function filterConsole() {
+  renderConsole();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setRconStatus(state, text) {
+  const dot = document.getElementById('rconDot');
+  dot.className = 'rcon-dot' + (state ? ' ' + state : '');
+  document.getElementById('rconStatusText').textContent = text;
+}
+
+// Diff
+let currentDiffPlugin = '';
+let currentDiffVersion = '';
+let currentDiffFolder = '';
+let currentDiffMode = 'live';
+
+function showDiff(plugin, version, folder) {
+  currentDiffPlugin = plugin;
+  currentDiffVersion = version;
+  currentDiffFolder = folder;
+  currentDiffMode = 'live';
+  document.getElementById('diffModeLive').style.display = '';
+  document.getElementById('diffModePrev').style.display = '';
+  document.getElementById('diffModeLive').classList.add('active');
+  document.getElementById('diffModePrev').classList.remove('active');
+  document.getElementById('diffTitle').textContent = plugin + ' ' + version;
+  loadDiff();
+  document.getElementById('diffModal').style.display = 'flex';
+}
+
+function switchDiffMode(mode) {
+  currentDiffMode = mode;
+  document.getElementById('diffModeLive').classList.toggle('active', mode === 'live');
+  document.getElementById('diffModePrev').classList.toggle('active', mode === 'previous');
+  loadDiff();
+}
+
+function loadDiff() {
+  document.getElementById('diffContent').textContent = 'Loading...';
+  document.getElementById('diffLabels').textContent = '';
+  fetch('/api/diff', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: currentDiffPlugin, folder: currentDiffFolder, mode: currentDiffMode })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('diffContent').textContent = d.msg || 'Diff failed.';
+      return;
+    }
+    document.getElementById('diffLabels').textContent = d.label_a + ' \u2192 ' + d.label_b;
+    if (!d.diff.length) {
+      document.getElementById('diffContent').innerHTML = '<span class="diff-line" style="color:#555;">No differences found.</span>';
+      return;
+    }
+    document.getElementById('diffContent').innerHTML = d.diff.map(line => {
+      const safe = escapeHtml(line);
+      if (line.startsWith('+++') || line.startsWith('---')) return '<span class="diff-line">' + safe + '</span>';
+      if (line.startsWith('@@')) return '<span class="diff-hunk">' + safe + '</span>';
+      if (line.startsWith('+')) return '<span class="diff-add">' + safe + '</span>';
+      if (line.startsWith('-')) return '<span class="diff-del">' + safe + '</span>';
+      return '<span class="diff-line">' + safe + '</span>';
+    }).join('\n');
+  }).catch(err => {
+    document.getElementById('diffContent').textContent = 'Error: ' + err.message;
+  });
+}
+
+function closeDiffModal() {
+  document.getElementById('diffModal').style.display = 'none';
+}
+
+function previewStagedDiff() {
+  if (!pendingCode || selected === null) return;
+  document.getElementById('diffTitle').textContent = plugins[selected].name + ' \u2014 Staged Changes';
+  document.getElementById('diffLabels').textContent = 'Live \u2192 Staged';
+  document.getElementById('diffContent').textContent = 'Loading...';
+  document.getElementById('diffModeLive').style.display = 'none';
+  document.getElementById('diffModePrev').style.display = 'none';
+  document.getElementById('diffModal').style.display = 'flex';
+  fetch('/api/diff/staged', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: plugins[selected].name, code: pendingCode })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('diffContent').textContent = d.msg || 'Diff failed.';
+      return;
+    }
+    if (!d.diff.length) {
+      document.getElementById('diffContent').innerHTML = '<span style="color:#555;">No differences \u2014 staged code matches live file.</span>';
+      return;
+    }
+    document.getElementById('diffContent').innerHTML = d.diff.map(function(line) {
+      var safe = escapeHtml(line);
+      if (line.startsWith('+++') || line.startsWith('---')) return '<span class="diff-line">' + safe + '</span>';
+      if (line.startsWith('@@')) return '<span class="diff-hunk">' + safe + '</span>';
+      if (line.startsWith('+')) return '<span class="diff-add">' + safe + '</span>';
+      if (line.startsWith('-')) return '<span class="diff-del">' + safe + '</span>';
+      return '<span class="diff-line">' + safe + '</span>';
+    }).join('\n');
+  }).catch(function(err) {
+    document.getElementById('diffContent').textContent = 'Error: ' + err.message;
+  });
+}
+
+// Settings
+function loadSettings() {
+  fetch('/api/settings').then(r => r.json()).then(d => {
+    if (!d.ok) return;
+    document.getElementById('settingsPin').value = '';
+    document.getElementById('settingsPluginDir').value = d.plugin_dir || '';
+    document.getElementById('settingsArchiveDir').value = d.archive_dir || '';
+    document.getElementById('settingsRconHost').value = d.rcon_host || '';
+    document.getElementById('settingsRconPort').value = d.rcon_port || 28016;
+    document.getElementById('settingsRconPass').value = d.rcon_password || '';
+    document.getElementById('settingsUpdateUrl').value = d.update_url || '';
+  });
+}
+
+function saveSettings() {
+  const data = {};
+  const pin = document.getElementById('settingsPin').value.trim();
+  if (pin) data.pin = pin;
+  data.plugin_dir = document.getElementById('settingsPluginDir').value.trim();
+  data.archive_dir = document.getElementById('settingsArchiveDir').value.trim();
+  data.rcon_host = document.getElementById('settingsRconHost').value.trim();
+  data.rcon_port = document.getElementById('settingsRconPort').value.trim();
+  data.rcon_password = document.getElementById('settingsRconPass').value.trim();
+  data.update_url = document.getElementById('settingsUpdateUrl').value.trim();
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(d => {
+    showStatus('settingsStatus', d.ok ? 'Settings saved.' : (d.msg || 'Save failed.'), d.ok);
+  }).catch(err => {
+    showStatus('settingsStatus', 'Error: ' + err.message, false);
+  });
+}
+
+let pendingUpdate = null;
+
+function checkForUpdate() {
+  var url = document.getElementById('settingsUpdateUrl').value.trim();
+  if (url) {
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ update_url: url })
+    });
+  }
+  document.getElementById('updateCheckStatus').textContent = 'Checking...';
+  document.getElementById('updateAvailable').style.display = 'none';
+  fetch('/api/update/check').then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('updateCheckStatus').textContent = d.msg || 'Check failed.';
+      return;
+    }
+    if (d.newer) {
+      document.getElementById('updateCheckStatus').textContent = '';
+      document.getElementById('updateVersionInfo').textContent = 'Update available: v' + d.latest + ' (current: v' + d.current + ')';
+      document.getElementById('updateNotes').textContent = d.notes || '';
+      document.getElementById('updateAvailable').style.display = 'block';
+      document.getElementById('updateApplyStatus').textContent = '';
+      pendingUpdate = { base_url: d.base_url, files: d.files };
+    } else {
+      document.getElementById('updateCheckStatus').textContent = 'You\'re on the latest version (v' + d.current + ')';
+    }
+  }).catch(function(err) {
+    document.getElementById('updateCheckStatus').textContent = 'Error: ' + err.message;
+  });
+}
+
+function applyUpdate() {
+  if (!pendingUpdate) return;
+  if (!confirm('Download and apply the update?\n\nYour config, changelog, and snapshots will NOT be touched.\nCurrent app files will be backed up before updating.\n\nOxLog will restart automatically.')) return;
+  document.getElementById('updateApplyStatus').textContent = 'Downloading ' + pendingUpdate.files.length + ' files...';
+  fetch('/api/update/apply', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(pendingUpdate)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      document.getElementById('updateApplyStatus').innerHTML = '<span style="color:#7ec87e;">Update staged. Restarting...</span>';
+      // Trigger restart
+      fetch('/api/update/restart', { method: 'POST' }).catch(function() {});
+      // Poll until server comes back
+      setTimeout(function pollRestart() {
+        fetch('/api/settings', { signal: AbortSignal.timeout(2000) })
+          .then(function() { window.location.reload(); })
+          .catch(function() { setTimeout(pollRestart, 2000); });
+      }, 3000);
+    } else {
+      document.getElementById('updateApplyStatus').textContent = d.msg || 'Update failed.';
+    }
+  }).catch(function(err) {
+    document.getElementById('updateApplyStatus').textContent = 'Error: ' + err.message;
+  });
+}
+
+// Compile Watch
+let compileWatchPlugin = null;
+let compileWatchTimer = null;
+let compileWatchLines = [];
+let compileWatchCallback = null;
+
+function startCompileWatch(pluginName) {
+  compileWatchPlugin = pluginName;
+  compileWatchLines = [];
+  document.getElementById('compileTitle').textContent = pluginName + ' \u2014 Compile';
+  document.getElementById('compileBody').innerHTML = '';
+  document.getElementById('compilePopup').classList.add('visible');
+  document.getElementById('compileCopyBtn').style.display = 'none';
+
+  if (!rconWs || rconWs.readyState !== 1) {
+    compileWatchLines.push({ text: 'Code pushed to live file.', type: 'success' });
+    compileWatchLines.push({ text: 'RCON not connected \u2014 cannot capture compile output.', type: '' });
+    compileWatchLines.push({ text: 'Connect RCON in the Console tab to see compile results here.', type: '' });
+    renderCompileOutput();
+    endCompileWatch('', 'No RCON');
+    return;
+  }
+
+  document.getElementById('compileStatus').textContent = 'Watching...';
+  document.getElementById('compileStatus').className = 'compile-status watching';
+
+  // Hook into RCON message handler
+  compileWatchCallback = function(msg) {
+    if (!msg.Message) return;
+    const text = msg.Message;
+    const nameLower = pluginName.toLowerCase();
+    const textLower = text.toLowerCase();
+    // Only capture messages that specifically mention this plugin
+    if (!textLower.includes(nameLower)) return;
+    var type = '';
+    if (msg.Type === 'Error' || text.includes('error') || text.includes('Error')) type = 'error';
+    else if (msg.Type === 'Warning' || text.includes('warning') || text.includes('Warning')) type = 'warning';
+    else if (text.includes('successfully') || text.includes('loaded')) type = 'success';
+    compileWatchLines.push({ text: text, type: type });
+    renderCompileOutput();
+
+    if (textLower.includes(nameLower) && text.includes('successfully')) {
+      endCompileWatch('ok', 'Compiled OK');
+    } else if (type === 'error') {
+      document.getElementById('compileStatus').textContent = 'Errors detected';
+      document.getElementById('compileStatus').className = 'compile-status err';
+      document.getElementById('compileCopyBtn').style.display = '';
+    }
+  };
+
+  // Auto-timeout after 15 seconds
+  compileWatchTimer = setTimeout(function() {
+    if (compileWatchLines.length === 0) {
+      endCompileWatch('', 'No output captured');
+    } else {
+      var hasError = compileWatchLines.some(function(l) { return l.type === 'error'; });
+      endCompileWatch(hasError ? 'err' : 'ok', hasError ? 'Done with errors' : 'Done');
+    }
+  }, 15000);
+}
+
+function renderCompileOutput() {
+  var el = document.getElementById('compileBody');
+  el.innerHTML = compileWatchLines.map(function(l) {
+    return '<div class="compile-line' + (l.type ? ' ' + l.type : '') + '">' + escapeHtml(l.text) + '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function endCompileWatch(state, label) {
+  if (compileWatchTimer) { clearTimeout(compileWatchTimer); compileWatchTimer = null; }
+  document.getElementById('compileStatus').textContent = label;
+  document.getElementById('compileStatus').className = 'compile-status' + (state ? ' ' + state : '');
+  if (state === 'err') {
+    document.getElementById('compileCopyBtn').style.display = '';
+  }
+  compileWatchCallback = null;
+}
+
+function copyCompileErrors() {
+  var errors = compileWatchLines
+    .filter(function(l) { return l.type === 'error'; })
+    .map(function(l) { return l.text; })
+    .join('\n');
+  if (!errors) errors = compileWatchLines.map(function(l) { return l.text; }).join('\n');
+  navigator.clipboard.writeText(errors).then(function() {
+    document.getElementById('compileCopyBtn').textContent = 'Copied!';
+    setTimeout(function() { document.getElementById('compileCopyBtn').textContent = 'Copy Errors'; }, 2000);
+  }).catch(function() {
+    // Fallback for non-HTTPS
+    var ta = document.createElement('textarea');
+    ta.value = errors;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('compileCopyBtn').textContent = 'Copied!';
+    setTimeout(function() { document.getElementById('compileCopyBtn').textContent = 'Copy Errors'; }, 2000);
+  });
+}
+
+function closeCompilePopup() {
+  document.getElementById('compilePopup').classList.remove('visible');
+  if (compileWatchTimer) { clearTimeout(compileWatchTimer); compileWatchTimer = null; }
+  compileWatchCallback = null;
+  compileWatchPlugin = null;
+}
+
+// Search
+function runSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  document.getElementById('searchStats').textContent = 'Searching...';
+  document.getElementById('searchResults').innerHTML = '<div class="empty">Searching...</div>';
+  fetch('/api/search', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ query: query })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('searchStats').textContent = '';
+      document.getElementById('searchResults').innerHTML = '<div class="empty">' + escapeHtml(d.msg || 'Search failed') + '</div>';
+      return;
+    }
+    document.getElementById('searchStats').textContent = d.total + ' matches across ' + d.files + ' files';
+    if (!d.results.length) {
+      document.getElementById('searchResults').innerHTML = '<div class="empty">No matches found</div>';
+      return;
+    }
+    const q = query.toLowerCase();
+    document.getElementById('searchResults').innerHTML = d.results.map(function(r) {
+      return '<div class="search-file-group">' +
+        '<div class="search-file-header" onclick="jumpToPlugin(\'' + r.plugin.replace(/'/g, "\\'") + '\')">' + escapeHtml(r.plugin) + ' <span style="color:#444;font-weight:normal;">' + escapeHtml(r.file) + ' \u2014 ' + r.matches.length + ' matches</span></div>' +
+        r.matches.map(function(m) {
+          var highlighted = highlightMatch(m.text, q);
+          return '<div class="search-match" onclick="jumpToPluginLine(\'' + r.plugin.replace(/'/g, "\\'") + '\',' + m.line + ')">' +
+            '<span class="search-line-num">' + m.line + '</span>' +
+            '<span class="search-line-text">' + highlighted + '</span></div>';
+        }).join('') +
+        '</div>';
+    }).join('');
+  }).catch(function(err) {
+    document.getElementById('searchStats').textContent = '';
+    document.getElementById('searchResults').innerHTML = '<div class="empty">Error: ' + escapeHtml(err.message) + '</div>';
+  });
+}
+
+function highlightMatch(text, query) {
+  var safe = escapeHtml(text);
+  var safeQuery = escapeHtml(query);
+  var idx = safe.toLowerCase().indexOf(safeQuery.toLowerCase());
+  if (idx === -1) return safe;
+  return safe.substring(0, idx) + '<span class="search-highlight">' + safe.substring(idx, idx + safeQuery.length) + '</span>' + safe.substring(idx + safeQuery.length);
+}
+
+function jumpToPlugin(pluginName) {
+  for (var i = 0; i < plugins.length; i++) {
+    if (plugins[i].name === pluginName) {
+      selectPlugin(i);
+      switchTab('editor');
+      return;
+    }
+  }
+}
+
+function jumpToPluginLine(pluginName, line) {
+  for (var i = 0; i < plugins.length; i++) {
+    if (plugins[i].name === pluginName) {
+      selectPlugin(i);
+      switchTab('editor');
+      // Wait for editor to load, then jump to line
+      setTimeout(function() {
+        if (aceEditor) {
+          aceEditor.gotoLine(line, 0, true);
+          aceEditor.focus();
+        }
+      }, 500);
+      return;
+    }
+  }
+}
+
+// Backup
+function runBackup() {
+  if (!confirm('Create a full backup of OxLog?')) return;
+  fetch('/api/archive', { method: 'POST' }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      alert('Backup saved to:\n' + d.path);
+    } else {
+      alert('Backup failed: ' + (d.msg || 'Unknown error'));
+    }
+  }).catch(err => alert('Backup error: ' + err.message));
+}
+
+function oxideSnapshot() {
+  if (!confirm('Create a full snapshot of the entire oxide folder?\n\nThis may take a moment for large installations.')) return;
+  showStatus('updateStatus', 'Creating oxide snapshot...', true);
+  fetch('/api/oxide/snapshot', { method: 'POST' }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      alert('Oxide snapshot saved to:\n' + d.path + '\n\nSize: ' + d.size);
+    } else {
+      alert('Snapshot failed: ' + (d.msg || 'Unknown error'));
+    }
+  }).catch(err => alert('Snapshot error: ' + err.message));
+}
+
+// Folder Browser
+let browseTarget = '';
+let browseCurrent = '';
+let browseParent = '';
+
+function openBrowse(inputId) {
+  browseTarget = inputId;
+  const current = document.getElementById(inputId).value.trim();
+  loadBrowse(current || '');
+  document.getElementById('browseOverlay').style.display = 'flex';
+}
+
+function closeBrowse() {
+  document.getElementById('browseOverlay').style.display = 'none';
+}
+
+function selectBrowse() {
+  if (browseCurrent) {
+    document.getElementById(browseTarget).value = browseCurrent;
+  }
+  closeBrowse();
+}
+
+function browseUp() {
+  if (browseParent !== undefined) loadBrowse(browseParent);
+}
+
+function loadBrowse(path) {
+  document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#333;font-size:12px;">Loading...</div>';
+  fetch('/api/browse', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ path: path })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#9e5a5a;font-size:12px;">' + escapeHtml(d.msg || 'Error') + '</div>';
+      return;
+    }
+    browseCurrent = d.path;
+    browseParent = d.parent;
+    document.getElementById('browsePath').textContent = d.path || 'Drives';
+    document.getElementById('browseUpBtn').style.display = d.path ? '' : 'none';
+    const list = document.getElementById('browseList');
+    if (!d.dirs.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:#333;font-size:12px;">No subfolders</div>';
+      return;
+    }
+    list.innerHTML = d.dirs.map(function(dir) {
+      const full = d.path ? (d.path.endsWith('\\') ? d.path + dir : d.path + '\\' + dir) : dir;
+      const escaped = full.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return '<div class="browse-item" onclick="loadBrowse(\'' + escaped + '\')"><span class="folder-icon">\u25B6</span>' + escapeHtml(dir) + '</div>';
+    }).join('');
+  }).catch(function(err) {
+    document.getElementById('browseList').innerHTML = '<div style="padding:20px;text-align:center;color:#9e5a5a;font-size:12px;">Error: ' + escapeHtml(err.message) + '</div>';
+  });
+}
+
+loadSidebar();
+
+// Tour
+const tourSteps = [
+  { el: '.sidebar',     title: 'Plugin Sidebar',     desc: 'All your tracked plugins listed here. Grouped by label, sorted by most recently updated. Press any letter key to jump to plugins starting with that letter.' },
+  { el: '.manage-btn',  title: 'Manage Plugins',     desc: 'Scans your oxide/plugins folder for .cs files. Check the ones you want to track, assign groups, and save.' },
+  { el: '[data-tab="update"]', title: 'Log Update',  desc: 'The main workflow. Select a plugin, bump the version, pick an update type, write notes, and push to Discord. Version auto-increments after each save.' },
+  { el: '[data-tab="editor"]', title: 'Editor',     desc: 'Edit plugin code directly in the browser. Ctrl+S to quick-save, or Save & Log to stage the code and jump to Log Update for versioning and Discord push. Tab key inserts spaces.' },
+  { el: '.paste-btn',   title: 'Paste Code',         desc: 'Reads code from your clipboard and stages it. When you hit Log & Push, the code gets written to the live .cs file, version-stamped, and snapshotted.' },
+  { el: '[data-tab="webhook"]', title: 'Webhook',    desc: 'Configure a Discord webhook per plugin. Each log entry gets pushed to the configured channel. You can also link a Claude project URL here.' },
+  { el: '[data-tab="history"]', title: 'History',    desc: 'Full changelog for each plugin. View diffs between versions, open snapshot folders, or revert to any previous version with one click.' },
+  { el: '[data-tab="console"]', title: 'Console',   desc: 'Live RCON connection to your Rust server. Filter output by plugin name or error type. Load, unload, and reload plugins directly.' },
+  { el: '[data-tab="search"]',  title: 'Search',    desc: 'Search across all tracked plugin files at once. Find effect paths, hook names, item shortnames \u2014 click a result to jump straight to that line in the editor.' },
+  { el: '[data-tab="settings"]', title: 'Settings',  desc: 'Change your PIN, update paths, and configure RCON connection details. Browse buttons let you navigate server directories.' },
+  { el: '.logout[onclick*="Backup"]', title: 'Backup', desc: 'Creates a full timestamped backup of OxLog \u2014 config, changelog, all version snapshots, and templates. Set the backup path in Settings.' }
+];
+
+let tourStep = 0;
+
+function tourStart() {
+  if (localStorage.getItem('oxlog_tour_done')) return;
+  tourStep = 0;
+  document.getElementById('tourOverlay').style.display = 'block';
+  tourShow();
+}
+
+function tourShow() {
+  const prev = document.querySelector('.tour-highlight');
+  if (prev) prev.classList.remove('tour-highlight');
+  const step = tourSteps[tourStep];
+  const el = document.querySelector(step.el);
+  const overlay = document.getElementById('tourOverlay');
+  const spotlight = document.getElementById('tourSpotlight');
+  const tooltip = document.getElementById('tourTooltip');
+  if (el) el.classList.add('tour-highlight');
+
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourDesc').textContent = step.desc;
+  document.getElementById('tourNextBtn').textContent = tourStep === tourSteps.length - 1 ? 'Done' : 'Next';
+
+  // Dots
+  document.getElementById('tourDots').innerHTML = tourSteps.map(function(_, i) {
+    return '<div class="tour-dot' + (i === tourStep ? ' active' : (i < tourStep ? ' done' : '')) + '"></div>';
+  }).join('');
+
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    const pad = 6;
+    const visible = rect.width > 0 && rect.height > 0;
+
+    if (visible) {
+      spotlight.style.display = 'block';
+      tooltip.style.transform = 'none';
+      spotlight.style.left = (rect.left - pad) + 'px';
+      spotlight.style.top = (rect.top - pad) + 'px';
+      spotlight.style.width = (rect.width + pad * 2) + 'px';
+      spotlight.style.height = (rect.height + pad * 2) + 'px';
+
+      // Position tooltip
+      const tooltipW = 300;
+      const tooltipH = 180;
+      let left = rect.right + 16;
+      let top = rect.top;
+
+      if (left + tooltipW > window.innerWidth - 20) {
+        left = rect.left - tooltipW - 16;
+      }
+      if (left < 20) {
+        left = Math.max(20, rect.left);
+        top = rect.bottom + 12;
+      }
+      if (top + tooltipH > window.innerHeight - 20) {
+        top = Math.max(20, window.innerHeight - tooltipH - 20);
+      }
+
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    } else {
+      // Element exists but not visible — center tooltip
+      spotlight.style.display = 'none';
+      tooltip.style.left = '50%';
+      tooltip.style.top = '50%';
+      tooltip.style.transform = 'translate(-50%, -50%)';
+    }
+  } else {
+    spotlight.style.display = 'none';
+    tooltip.style.left = '50%';
+    tooltip.style.top = '50%';
+    tooltip.style.transform = 'translate(-50%, -50%)';
+  }
+}
+
+function tourNext() {
+  tourStep++;
+  if (tourStep >= tourSteps.length) {
+    tourEnd();
+    return;
+  }
+  tourShow();
+}
+
+function tourEnd() {
+  const prev = document.querySelector('.tour-highlight');
+  if (prev) prev.classList.remove('tour-highlight');
+  document.getElementById('tourOverlay').style.display = 'none';
+  localStorage.setItem('oxlog_tour_done', '1');
+}
+
+function closeHelp() {
+  document.getElementById('helpOverlay').style.display = 'none';
+}
+
+function replayTour() {
+  closeHelp();
+  localStorage.removeItem('oxlog_tour_done');
+  switchTab('update');
+  tourStep = 0;
+  document.getElementById('tourOverlay').style.display = 'block';
+  tourShow();
+}
+
+// Start tour after a brief delay to let sidebar load
+setTimeout(tourStart, 800);
+
+{% if just_updated %}
+document.getElementById('updateSplash').style.display = 'flex';
+{% endif %}
+
+window.addEventListener('beforeunload', function(e) {
+  if (editorDirty || pendingCode) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+    </script>
+</body>
+</html>

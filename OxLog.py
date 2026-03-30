@@ -23,7 +23,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.0.5"
+OXLOG_VERSION = "1.0.6"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -1138,9 +1138,22 @@ def update_apply():
                 f.write(r.content)
 
         return jsonify({"ok": True, "backup": pre_update,
-                        "msg": "Update staged. Restart OxLog to apply."})
+                        "msg": "Update staged. Restarting OxLog..."})
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
+
+@app.route("/api/update/restart", methods=["POST"])
+def update_restart():
+    """Shut down the server so start.bat restarts it with the new code"""
+    if not session.get("authed"):
+        return jsonify({"ok": False}), 401
+    import threading
+    def do_exit():
+        import time
+        time.sleep(1)
+        os._exit(0)
+    threading.Thread(target=do_exit, daemon=True).start()
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     # Apply pending update if one was staged
@@ -1157,6 +1170,17 @@ if __name__ == "__main__":
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
                     shutil.copy2(src, dest)
             shutil.rmtree(pending)
+            # Read version from the new OxLog.py and update in memory
+            new_oxlog = os.path.join(app_dir, "OxLog.py")
+            try:
+                with open(new_oxlog, "r", encoding="utf-8") as f:
+                    for line in f:
+                        m = re.match(r'OXLOG_VERSION\s*=\s*"([^"]+)"', line)
+                        if m:
+                            globals()["OXLOG_VERSION"] = m.group(1)
+                            break
+            except Exception:
+                pass
             # Write flag so the UI shows a splash
             with open(os.path.join(app_dir, ".updated"), "w") as f:
                 f.write("ok")
