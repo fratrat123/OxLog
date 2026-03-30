@@ -23,7 +23,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.0.4"
+OXLOG_VERSION = "1.0.5"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -106,16 +106,76 @@ def update_version_in_file(filepath, new_version):
     except Exception:
         return False
 
+def get_versions_dir():
+    """Return the versions directory — uses backup dir if set, otherwise local"""
+    config = load_config()
+    archive = config.get("archive_dir", "")
+    if archive:
+        return os.path.join(archive, "versions")
+    return VERSIONS_DIR
+
+def discover_plugin_files(plugin_name, plugin_dir):
+    """Find config and data files associated with a plugin"""
+    oxide_root = os.path.dirname(plugin_dir)
+    config_dir = os.path.join(oxide_root, "config")
+    data_dir = os.path.join(oxide_root, "data")
+    files = []  # list of (src_path, relative_snapshot_path)
+
+    # Config file
+    config_file = plugin_name + ".json"
+    config_path = os.path.join(config_dir, config_file)
+    if os.path.exists(config_path):
+        files.append((config_path, os.path.join("config", config_file)))
+
+    # Data files
+    if os.path.isdir(data_dir):
+        data_json = plugin_name + ".json"
+        data_path = os.path.join(data_dir, data_json)
+        if os.path.exists(data_path):
+            files.append((data_path, os.path.join("data", data_json)))
+        data_subfolder = os.path.join(data_dir, plugin_name)
+        if os.path.isdir(data_subfolder):
+            try:
+                for fname in sorted(os.listdir(data_subfolder)):
+                    fpath = os.path.join(data_subfolder, fname)
+                    if os.path.isfile(fpath):
+                        files.append((fpath, os.path.join("data", plugin_name, fname)))
+            except PermissionError:
+                pass
+        # Parse .cs for data file references
+        cs_path = os.path.join(plugin_dir, plugin_name + ".cs")
+        if os.path.exists(cs_path):
+            try:
+                with open(cs_path, "r", encoding="utf-8", errors="ignore") as f:
+                    source = f.read()
+                refs = set(re.findall(r'(?:GetFile|GetDatafile|ReadObject|WriteObject)\s*(?:<[^>]*>)?\s*\(\s*"([^"]+)"', source))
+                existing = {f[0] for f in files}
+                for ref in sorted(refs):
+                    ref_path = os.path.join(data_dir, ref + ".json") if not ref.endswith(".json") else os.path.join(data_dir, ref)
+                    ref_name = ref + ".json" if not ref.endswith(".json") else ref
+                    if os.path.exists(ref_path) and ref_path not in existing:
+                        files.append((ref_path, os.path.join("data", ref_name)))
+            except Exception:
+                pass
+    return files
+
 def snapshot_plugin(plugin_dir, plugin_file, plugin_name, version, update_type, notes, ts):
     try:
         version_str = "v" + ".".join(str(x) for x in version)
         safe_ts = ts.replace(":", "-").replace(" ", "_")
         folder_name = f"{version_str} - {update_type} - {safe_ts}"
-        snapshot_dir = os.path.join(VERSIONS_DIR, plugin_name, folder_name)
+        snapshot_dir = os.path.join(get_versions_dir(), plugin_name, folder_name)
         os.makedirs(snapshot_dir, exist_ok=True)
+        # Copy plugin .cs
         src = os.path.join(plugin_dir, plugin_file)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(snapshot_dir, plugin_file))
+        # Copy config and data files
+        for src_path, rel_path in discover_plugin_files(plugin_name, plugin_dir):
+            dest = os.path.join(snapshot_dir, rel_path)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.copy2(src_path, dest)
+        # Write notes
         with open(os.path.join(snapshot_dir, "notes.txt"), "w", encoding="utf-8") as f:
             f.write(f"{plugin_name} {version_str} — {update_type}\n{ts}\n\n{notes}")
         return snapshot_dir
@@ -501,8 +561,28 @@ def revert():
     snapshot_plugin(plugin_dir, plugin_file, plugin_name, pre_version, "Pre-Revert", "Auto-snapshot before revert to " + version_str, ts)
 
     # Restore snapshot to live
+    oxide_root = os.path.dirname(plugin_dir)
     try:
         shutil.copy2(snapshot_src, live_path)
+        # Restore config files
+        snapshot_config = os.path.join(abs_folder, "config")
+        if os.path.isdir(snapshot_config):
+            config_dir = os.path.join(oxide_root, "config")
+            for fname in os.listdir(snapshot_config):
+                src = os.path.join(snapshot_config, fname)
+                if os.path.isfile(src):
+                    shutil.copy2(src, os.path.join(config_dir, fname))
+        # Restore data files
+        snapshot_data = os.path.join(abs_folder, "data")
+        if os.path.isdir(snapshot_data):
+            data_dir = os.path.join(oxide_root, "data")
+            for root, dirs, files_list in os.walk(snapshot_data):
+                for fname in files_list:
+                    src = os.path.join(root, fname)
+                    rel = os.path.relpath(src, snapshot_data)
+                    dest = os.path.join(data_dir, rel)
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    shutil.copy2(src, dest)
     except Exception as e:
         return jsonify({"ok": False, "msg": "Failed to restore: " + str(e)})
 
@@ -569,7 +649,7 @@ def history():
                         update_type = parts[1]
                         ts = parts[2]
                         safe_ts = ts.replace(":", "-").replace(" ", "_")
-                        folder = os.path.join(VERSIONS_DIR, pname, f"{ver} - {update_type} - {safe_ts}")
+                        folder = os.path.join(get_versions_dir(), pname, f"{ver} - {update_type} - {safe_ts}")
                         notes_content = ""
                         notes_file = os.path.join(folder, "notes.txt")
                         if os.path.exists(notes_file):
@@ -837,7 +917,7 @@ def diff_view():
         label_b = "Live"
     else:
         # Find previous snapshot
-        plugin_versions_dir = os.path.join(VERSIONS_DIR, plugin_name)
+        plugin_versions_dir = os.path.join(get_versions_dir(), plugin_name)
         if not os.path.isdir(plugin_versions_dir):
             return jsonify({"ok": False, "msg": "No version history"})
         folders = sorted(os.listdir(plugin_versions_dir))
@@ -936,8 +1016,8 @@ def archive():
                 shutil.copy2(item, backup_path)
         if os.path.isdir("templates"):
             shutil.copytree("templates", os.path.join(backup_path, "templates"))
-        if os.path.isdir(VERSIONS_DIR):
-            shutil.copytree(VERSIONS_DIR, os.path.join(backup_path, "versions"))
+        if os.path.isdir(get_versions_dir()):
+            shutil.copytree(get_versions_dir(), os.path.join(backup_path, "versions"))
         return jsonify({"ok": True, "path": backup_path})
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
