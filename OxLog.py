@@ -26,7 +26,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.1.0"
+OXLOG_VERSION = "1.1.1"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -37,6 +37,7 @@ DEFAULT_CONFIG = {
     "versions_dir": "",
     "backup_dir": "",
     "oxide_snapshot_dir": "",
+    "managed_plugins_dir": "",
     "groups": [],
     "plugins": [],
     "rcon_host": "",
@@ -370,6 +371,7 @@ def get_settings():
         "versions_dir": config.get("versions_dir", ""),
         "backup_dir": config.get("backup_dir", ""),
         "oxide_snapshot_dir": config.get("oxide_snapshot_dir", ""),
+        "managed_plugins_dir": config.get("managed_plugins_dir", ""),
         "rcon_host": config.get("rcon_host", ""),
         "rcon_port": config.get("rcon_port", 28016),
         "rcon_password": config.get("rcon_password", ""),
@@ -396,6 +398,8 @@ def save_settings():
         config["backup_dir"] = data["backup_dir"]
     if "oxide_snapshot_dir" in data:
         config["oxide_snapshot_dir"] = data["oxide_snapshot_dir"]
+    if "managed_plugins_dir" in data:
+        config["managed_plugins_dir"] = data["managed_plugins_dir"]
     if "rcon_host" in data:
         config["rcon_host"] = data["rcon_host"]
     if "rcon_port" in data:
@@ -1049,13 +1053,11 @@ def archive():
     backup_path = os.path.join(backup_base, backup_name)
     try:
         os.makedirs(backup_path, exist_ok=True)
-        for item in [CONFIG_FILE, LOG_FILE, "OxLog.py"]:
+        for item in [CONFIG_FILE, LOG_FILE, "OxLog.py", "start.bat", "install.bat"]:
             if os.path.exists(item):
                 shutil.copy2(item, backup_path)
         if os.path.isdir("templates"):
             shutil.copytree("templates", os.path.join(backup_path, "templates"))
-        if os.path.isdir(get_versions_dir()):
-            shutil.copytree(get_versions_dir(), os.path.join(backup_path, "versions"))
         return jsonify({"ok": True, "path": backup_path})
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
@@ -1097,6 +1099,32 @@ def oxide_snapshot():
         else:
             size_str = f"{total / 1024:.1f} KB"
         return jsonify({"ok": True, "path": snapshot_path, "size": size_str})
+    except Exception as e:
+        return jsonify({"ok": False, "msg": str(e)})
+
+@app.route("/api/sync/plugins", methods=["POST"])
+def sync_plugins():
+    if not session.get("authed"):
+        return jsonify({"ok": False}), 401
+    config = load_config()
+    plugin_dir = config.get("plugin_dir", "")
+    if not plugin_dir:
+        return jsonify({"ok": False, "msg": "Plugin directory not configured"})
+    dest_dir = config.get("managed_plugins_dir", "")
+    if not dest_dir:
+        return jsonify({"ok": False, "msg": "Managed Plugins directory not configured. Set it in Settings."})
+    try:
+        os.makedirs(dest_dir, exist_ok=True)
+        copied = 0
+        for p in config["plugins"]:
+            pfile = p.get("file", "")
+            if not pfile:
+                continue
+            src = os.path.join(plugin_dir, pfile)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(dest_dir, pfile))
+                copied += 1
+        return jsonify({"ok": True, "count": copied, "path": dest_dir})
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
 
