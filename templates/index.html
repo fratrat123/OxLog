@@ -622,15 +622,15 @@
             padding: 14px 20px;
         }
 
-        .code-modal-body pre {
-            margin: 0;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            color: #aaa;
-            white-space: pre;
-            tab-size: 4;
-        }
+            .code-modal-body pre {
+                margin: 0;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.6;
+                color: #aaa;
+                white-space: pre;
+                tab-size: 4;
+            }
 
         .code-modal-footer {
             padding: 14px 20px;
@@ -679,9 +679,17 @@
             background: #333;
         }
 
-        .rcon-dot.connected { background: #5a9e5a; }
-        .rcon-dot.connecting { background: #9e9e5a; }
-        .rcon-dot.error { background: #9e5a5a; }
+            .rcon-dot.connected {
+                background: #5a9e5a;
+            }
+
+            .rcon-dot.connecting {
+                background: #9e9e5a;
+            }
+
+            .rcon-dot.error {
+                background: #9e5a5a;
+            }
 
         .console-filter {
             flex: 1;
@@ -768,10 +776,21 @@
             word-break: break-all;
         }
 
-        .console-line.warning { color: #c8c87e; }
-        .console-line.error { color: #c87e7e; }
-        .console-line.cmd { color: #7e7ec8; }
-        .console-line.system { color: #5a9e5a; }
+            .console-line.warning {
+                color: #c8c87e;
+            }
+
+            .console-line.error {
+                color: #c87e7e;
+            }
+
+            .console-line.cmd {
+                color: #7e7ec8;
+            }
+
+            .console-line.system {
+                color: #5a9e5a;
+            }
 
         .console-input-row {
             display: flex;
@@ -841,20 +860,34 @@
             padding: 0;
         }
 
-        .diff-modal-body pre {
-            margin: 0;
-            padding: 14px 20px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            white-space: pre;
-            tab-size: 4;
+            .diff-modal-body pre {
+                margin: 0;
+                padding: 14px 20px;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.6;
+                white-space: pre;
+                tab-size: 4;
+            }
+
+        .diff-line {
+            color: #666;
         }
 
-        .diff-line { color: #666; }
-        .diff-add { color: #7ec87e; background: rgba(90,158,90,0.08); }
-        .diff-del { color: #c87e7e; background: rgba(158,90,90,0.08); }
-        .diff-hunk { color: #7e7ec8; margin-top: 4px; }
+        .diff-add {
+            color: #7ec87e;
+            background: rgba(90,158,90,0.08);
+        }
+
+        .diff-del {
+            color: #c87e7e;
+            background: rgba(158,90,90,0.08);
+        }
+
+        .diff-hunk {
+            color: #7e7ec8;
+            margin-top: 4px;
+        }
 
         .diff-modal-footer {
             padding: 14px 20px;
@@ -880,7 +913,10 @@
             cursor: pointer;
         }
 
-            .diff-mode-btn:hover { color: #aaa; border-color: #444; }
+            .diff-mode-btn:hover {
+                color: #aaa;
+                border-color: #444;
+            }
 
             .diff-mode-btn.active {
                 border-color: #5a9e5a;
@@ -950,11 +986,11 @@
                 color: #ccc;
             }
 
-        .browse-item .folder-icon {
-            color: #5a9e5a;
-            font-size: 11px;
-            flex-shrink: 0;
-        }
+            .browse-item .folder-icon {
+                color: #5a9e5a;
+                font-size: 11px;
+                flex-shrink: 0;
+            }
 
         .browse-footer {
             padding: 12px 16px;
@@ -1032,8 +1068,13 @@
             background: #2a2a2a;
         }
 
-        .tour-dot.active { background: #5a9e5a; }
-        .tour-dot.done { background: #3a5a3a; }
+            .tour-dot.active {
+                background: #5a9e5a;
+            }
+
+            .tour-dot.done {
+                background: #3a5a3a;
+            }
 
         .tour-btns {
             display: flex;
@@ -1053,7 +1094,10 @@
             color: #555;
         }
 
-            .tour-btn-skip:hover { color: #888; border-color: #444; }
+            .tour-btn-skip:hover {
+                color: #888;
+                border-color: #444;
+            }
 
         .tour-btn-next {
             background: #1e2e1e;
@@ -1061,15 +1105,17 @@
             color: #7ec87e;
         }
 
-            .tour-btn-next:hover { background: #243424; }
+            .tour-btn-next:hover {
+                background: #243424;
+            }
 
         .tour-highlight {
             color: #fff !important;
         }
 
-        .tour-highlight * {
-            color: #fff !important;
-        }
+            .tour-highlight * {
+                color: #fff !important;
+            }
 
         .help-overlay {
             display: none;
@@ -1110,7 +1156,9 @@
             margin-bottom: 20px;
         }
 
-        .help-section:last-child { margin-bottom: 0; }
+            .help-section:last-child {
+                margin-bottom: 0;
+            }
 
         .help-section-title {
             font-size: 13px;
@@ -1125,15 +1173,15 @@
             line-height: 1.7;
         }
 
-        .help-section-body code {
-            background: #0d0d0d;
-            border: 0.5px solid #2a2a2a;
-            border-radius: 4px;
-            padding: 1px 6px;
-            font-family: 'Consolas', monospace;
-            font-size: 11px;
-            color: #aaa;
-        }
+            .help-section-body code {
+                background: #0d0d0d;
+                border: 0.5px solid #2a2a2a;
+                border-radius: 4px;
+                padding: 1px 6px;
+                font-family: 'Consolas', monospace;
+                font-size: 11px;
+                color: #aaa;
+            }
 
         .help-footer {
             padding: 14px 24px;
@@ -1211,9 +1259,17 @@
             text-align: center;
         }
 
-        .editor-file-icon.cs { color: #5a9e5a; }
-        .editor-file-icon.json { color: #9e9e5a; }
-        .editor-file-icon.data { color: #5a7e9e; }
+            .editor-file-icon.cs {
+                color: #5a9e5a;
+            }
+
+            .editor-file-icon.json {
+                color: #9e9e5a;
+            }
+
+            .editor-file-icon.data {
+                color: #5a7e9e;
+            }
 
         .search-input-row {
             display: flex;
@@ -1339,9 +1395,17 @@
             color: #555;
         }
 
-        .compile-status.ok { color: #5a9e5a; }
-        .compile-status.err { color: #c87e7e; }
-        .compile-status.watching { color: #9e9e5a; }
+            .compile-status.ok {
+                color: #5a9e5a;
+            }
+
+            .compile-status.err {
+                color: #c87e7e;
+            }
+
+            .compile-status.watching {
+                color: #9e9e5a;
+            }
 
         .compile-body {
             flex: 1;
@@ -1352,10 +1416,21 @@
             line-height: 1.5;
         }
 
-        .compile-line { color: #888; }
-        .compile-line.error { color: #c87e7e; }
-        .compile-line.warning { color: #c8c87e; }
-        .compile-line.success { color: #5a9e5a; }
+        .compile-line {
+            color: #888;
+        }
+
+            .compile-line.error {
+                color: #c87e7e;
+            }
+
+            .compile-line.warning {
+                color: #c8c87e;
+            }
+
+            .compile-line.success {
+                color: #5a9e5a;
+            }
 
         .compile-close {
             cursor: pointer;
@@ -1366,7 +1441,9 @@
             background: none;
         }
 
-            .compile-close:hover { color: #888; }
+            .compile-close:hover {
+                color: #888;
+            }
 
         .update-splash {
             position: fixed;
