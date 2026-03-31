@@ -7,6 +7,8 @@ import json, requests, difflib
 from datetime import datetime
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
 
 SECRET_KEY_FILE = ".secret_key"
 def get_secret_key():
@@ -23,7 +25,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.0.8"
+OXLOG_VERSION = "1.0.6"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
