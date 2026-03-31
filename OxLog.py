@@ -9,6 +9,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
+app.jinja_env.auto_reload = True
 
 SECRET_KEY_FILE = ".secret_key"
 def get_secret_key():
@@ -437,6 +438,7 @@ def log_update():
             plugin_file = p.get("file", "")
             break
 
+    snap_dir = None
     if plugin_file:
         filepath = os.path.join(plugin_dir, plugin_file)
         code = data.get("code")
@@ -448,7 +450,7 @@ def log_update():
             except Exception:
                 pass
         update_version_in_file(filepath, version_list)
-        snapshot_plugin(plugin_dir, plugin_file, plugin_name, version_list, update_type, notes, ts)
+        snap_dir = snapshot_plugin(plugin_dir, plugin_file, plugin_name, version_list, update_type, notes, ts)
 
     save_config(config)
 
@@ -468,7 +470,7 @@ def log_update():
     next_version = version_list[:]
     next_version[2] += 1
 
-    return jsonify({"ok": True, "discord": discord_ok, "next_version": next_version})
+    return jsonify({"ok": True, "discord": discord_ok, "next_version": next_version, "snapshot": snap_dir or ""})
 
 @app.route("/api/webhook", methods=["POST"])
 def save_webhook():
