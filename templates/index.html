@@ -6,6 +6,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-csharp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-json.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/theme-tomorrow_night.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-language_tools.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-language_tools.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -312,7 +314,7 @@
                 color: #aaa;
             }
 
-            .pill.active {
+            .pill.pill-selected {
                 border-color: #5a9e5a;
                 color: #7ec87e;
                 background: #1a2a1a;
@@ -1483,7 +1485,7 @@
                     <div>
                         <div class="field-label">Update type</div>
                         <div class="type-pills">
-                            <div class="pill active" data-type="Bugfix" onclick="selectType(this)">Bugfix</div>
+                            <div class="pill" data-type="Bugfix" onclick="selectType(this)">Bugfix</div>
                             <div class="pill" data-type="Feature" onclick="selectType(this)">Feature</div>
                             <div class="pill" data-type="Refactor" onclick="selectType(this)">Refactor</div>
                         </div>
@@ -1630,7 +1632,7 @@
                         </div>
                     </div>
                     <div>
-                        <div class="field-label">Backup Directory</div>
+                        <div class="field-label">Backup Directory <span style="color:#333;font-size:9px;">(snapshots, backups &amp; oxide snapshots)</span></div>
                         <div style="display:flex;gap:6px;">
                             <input type="text" id="settingsArchiveDir" placeholder="C:\rustserver\OxLog\backup" style="flex:1;" />
                             <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsArchiveDir')">Browse</button>
@@ -1880,7 +1882,7 @@
 let plugins = {{ plugins | tojson }};
 let selected = null;
 let ver = [1,0,0];
-let updateType = 'Bugfix';
+let updateType = '';
 let scanData = [];
 let groups = [];
 let lastKey = '';
@@ -1952,6 +1954,8 @@ function selectPlugin(i) {
   const p = plugins[i];
   ver = [...p.version];
   pendingCode = null;
+  updateType = '';
+  document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('pill-selected'); });
   document.getElementById('stagedBar').classList.remove('visible');
   loadSidebar();
   updateVerDisplay();
@@ -2005,14 +2009,15 @@ function updateVerDisplay() {
 }
 
 function selectType(el) {
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('.pill[data-type]').forEach(p => p.classList.remove('pill-selected'));
+  el.classList.add('pill-selected');
   updateType = el.dataset.type;
 }
 
 function submitUpdate() {
   if (selected === null) return;
   const notes = document.getElementById('notes').value.trim();
+  if (!updateType) { showStatus('updateStatus', 'Please select an update type.', false); return; }
   if (!notes) { showStatus('updateStatus', 'Please add some notes.', false); return; }
   const payload = { plugin: plugins[selected].name, version: 'v'+ver.join('.'), type: updateType, notes };
   const hadCode = !!pendingCode;
@@ -2035,6 +2040,8 @@ function submitUpdate() {
       document.getElementById('stagedBar').classList.remove('visible');
       showStatus('updateStatus', (d.discord ? 'Logged and pushed to Discord.' : 'Logged. Discord push failed — check webhook.') + codeMsg, d.discord);
       document.getElementById('notes').value = '';
+      updateType = '';
+      document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('pill-selected'); });
       loadSidebar();
       if (hadCode) {
         startCompileWatch(pushPluginName);
@@ -2353,8 +2360,21 @@ function initAceEditor() {
     tabSize: 4,
     useSoftTabs: true,
     wrap: false,
-    scrollPastEnd: 0.5
+    scrollPastEnd: 0.5,
+    // VS-like features
+    enableBasicAutocompletion: true,
+    enableLiveAutocompletion: true,
+    enableSnippets: false,
+    showFoldWidgets: true,
+    fadeFoldWidgets: true,
+    highlightActiveLine: true,
+    highlightSelectedWord: true,
+    displayIndentGuides: true,
+    animatedScroll: true
   });
+  aceEditor.setBehavioursEnabled(true);  // auto-close brackets, braces, quotes, parens
+  aceEditor.setShowInvisibles(false);
+  aceEditor.session.setFoldStyle('markbeginend');
   aceEditor.session.on('change', function() {
     editorDirty = aceEditor.getValue() !== editorOriginal;
     document.getElementById('editorModified').style.display = editorDirty ? 'inline' : 'none';
@@ -2891,7 +2911,7 @@ function checkForUpdate() {
 
 function applyUpdate() {
   if (!pendingUpdate) return;
-  if (!confirm('Download and apply the update?\n\nYour config, changelog, and snapshots will NOT be touched.\nCurrent app files will be backed up before updating.')) return;
+  if (!confirm('Download and apply the update?\n\nYour config, changelog, and snapshots will NOT be touched.\nCurrent app files will be backed up before updating.\n\nOxLog will restart automatically.')) return;
   document.getElementById('updateApplyStatus').textContent = 'Downloading ' + pendingUpdate.files.length + ' files...';
   fetch('/api/update/apply', {
     method: 'POST',
@@ -2899,8 +2919,15 @@ function applyUpdate() {
     body: JSON.stringify(pendingUpdate)
   }).then(r => r.json()).then(d => {
     if (d.ok) {
-      document.getElementById('updateApplyStatus').innerHTML = '<span style="color:#7ec87e;">Update staged! Restart OxLog to apply.</span>';
-      alert('Update staged!\n\nBackup saved to: ' + d.backup + '\n\nRestart OxLog (close and re-run start.bat) to apply the update.');
+      document.getElementById('updateApplyStatus').innerHTML = '<span style="color:#7ec87e;">Update staged. Restarting...</span>';
+      // Trigger restart
+      fetch('/api/update/restart', { method: 'POST' }).catch(function() {});
+      // Poll until server comes back
+      setTimeout(function pollRestart() {
+        fetch('/api/settings', { signal: AbortSignal.timeout(2000) })
+          .then(function() { window.location.reload(); })
+          .catch(function() { setTimeout(pollRestart, 2000); });
+      }, 3000);
     } else {
       document.getElementById('updateApplyStatus').textContent = d.msg || 'Update failed.';
     }
@@ -3306,6 +3333,12 @@ window.addEventListener('beforeunload', function(e) {
     e.returnValue = '';
   }
 });
+
+// Force clear update type on every page load
+setTimeout(function() {
+  updateType = '';
+  document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('pill-selected'); });
+}, 100);
     </script>
 </body>
 </html>
