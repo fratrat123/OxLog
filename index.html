@@ -6,6 +6,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-csharp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-json.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/theme-tomorrow_night.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-language_tools.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-language_tools.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -1483,7 +1485,7 @@
                     <div>
                         <div class="field-label">Update type</div>
                         <div class="type-pills">
-                            <div class="pill active" data-type="Bugfix" onclick="selectType(this)">Bugfix</div>
+                            <div class="pill" data-type="Bugfix" onclick="selectType(this)">Bugfix</div>
                             <div class="pill" data-type="Feature" onclick="selectType(this)">Feature</div>
                             <div class="pill" data-type="Refactor" onclick="selectType(this)">Refactor</div>
                         </div>
@@ -1880,7 +1882,7 @@
 let plugins = {{ plugins | tojson }};
 let selected = null;
 let ver = [1,0,0];
-let updateType = 'Bugfix';
+let updateType = '';
 let scanData = [];
 let groups = [];
 let lastKey = '';
@@ -1952,6 +1954,8 @@ function selectPlugin(i) {
   const p = plugins[i];
   ver = [...p.version];
   pendingCode = null;
+  updateType = '';
+  document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('active'); });
   document.getElementById('stagedBar').classList.remove('visible');
   loadSidebar();
   updateVerDisplay();
@@ -2013,6 +2017,7 @@ function selectType(el) {
 function submitUpdate() {
   if (selected === null) return;
   const notes = document.getElementById('notes').value.trim();
+  if (!updateType) { showStatus('updateStatus', 'Please select an update type.', false); return; }
   if (!notes) { showStatus('updateStatus', 'Please add some notes.', false); return; }
   const payload = { plugin: plugins[selected].name, version: 'v'+ver.join('.'), type: updateType, notes };
   const hadCode = !!pendingCode;
@@ -2035,6 +2040,8 @@ function submitUpdate() {
       document.getElementById('stagedBar').classList.remove('visible');
       showStatus('updateStatus', (d.discord ? 'Logged and pushed to Discord.' : 'Logged. Discord push failed — check webhook.') + codeMsg, d.discord);
       document.getElementById('notes').value = '';
+      updateType = '';
+      document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('active'); });
       loadSidebar();
       if (hadCode) {
         startCompileWatch(pushPluginName);
@@ -2353,8 +2360,21 @@ function initAceEditor() {
     tabSize: 4,
     useSoftTabs: true,
     wrap: false,
-    scrollPastEnd: 0.5
+    scrollPastEnd: 0.5,
+    // VS-like features
+    enableBasicAutocompletion: true,
+    enableLiveAutocompletion: true,
+    enableSnippets: false,
+    showFoldWidgets: true,
+    fadeFoldWidgets: true,
+    highlightActiveLine: true,
+    highlightSelectedWord: true,
+    displayIndentGuides: true,
+    animatedScroll: true
   });
+  aceEditor.setBehavioursEnabled(true);  // auto-close brackets, braces, quotes, parens
+  aceEditor.setShowInvisibles(false);
+  aceEditor.session.setFoldStyle('markbeginend');
   aceEditor.session.on('change', function() {
     editorDirty = aceEditor.getValue() !== editorOriginal;
     document.getElementById('editorModified').style.display = editorDirty ? 'inline' : 'none';
