@@ -2038,13 +2038,14 @@ function submitUpdate() {
       const codeMsg = pendingCode ? ' Code pushed.' : '';
       pendingCode = null;
       document.getElementById('stagedBar').classList.remove('visible');
-      showStatus('updateStatus', (d.discord ? 'Logged and pushed to Discord.' : 'Logged. Discord push failed — check webhook.') + codeMsg, d.discord);
+      const snapMsg = d.snapshot ? '\nSaved to: ' + d.snapshot : '';
+      showStatus('updateStatus', (d.discord ? 'Logged and pushed to Discord.' : 'Logged. Discord push failed — check webhook.') + codeMsg + snapMsg, d.discord);
       document.getElementById('notes').value = '';
       updateType = '';
       document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('pill-selected'); });
       loadSidebar();
       if (hadCode) {
-        startCompileWatch(pushPluginName);
+        startCompileWatch(pushPluginName, d.snapshot);
       }
     } else {
       showStatus('updateStatus', d.msg || 'Log failed.', false);
@@ -2942,13 +2943,17 @@ let compileWatchTimer = null;
 let compileWatchLines = [];
 let compileWatchCallback = null;
 
-function startCompileWatch(pluginName) {
+function startCompileWatch(pluginName, snapshotPath) {
   compileWatchPlugin = pluginName;
   compileWatchLines = [];
   document.getElementById('compileTitle').textContent = pluginName + ' \u2014 Compile';
   document.getElementById('compileBody').innerHTML = '';
   document.getElementById('compilePopup').classList.add('visible');
   document.getElementById('compileCopyBtn').style.display = 'none';
+
+  if (snapshotPath) {
+    compileWatchLines.push({ text: 'Snapshot: ' + snapshotPath, type: '' });
+  }
 
   if (!rconWs || rconWs.readyState !== 1) {
     compileWatchLines.push({ text: 'Code pushed to live file.', type: 'success' });
