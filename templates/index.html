@@ -1631,11 +1631,30 @@
                             <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsPluginDir')">Browse</button>
                         </div>
                     </div>
-                    <div>
-                        <div class="field-label">Backup Directory <span style="color:#333;font-size:9px;">(snapshots, backups &amp; oxide snapshots)</span></div>
-                        <div style="display:flex;gap:6px;">
-                            <input type="text" id="settingsArchiveDir" placeholder="C:\rustserver\OxLog\backup" style="flex:1;" />
-                            <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsArchiveDir')">Browse</button>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Save Paths <span style="color:#333;font-size:9px;">(leave blank for default local folders)</span></div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">Plugin Snapshots</div>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="settingsVersionsDir" placeholder="versions/" style="flex:1;" />
+                                    <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsVersionsDir')">Browse</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="field-label">OxLog Backups</div>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="settingsBackupDir" placeholder="backup/" style="flex:1;" />
+                                    <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsBackupDir')">Browse</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="field-label">Oxide Snapshots</div>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="settingsOxideSnapshotDir" placeholder="backup/" style="flex:1;" />
+                                    <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsOxideSnapshotDir')">Browse</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
@@ -2848,7 +2867,9 @@ function loadSettings() {
     if (!d.ok) return;
     document.getElementById('settingsPin').value = '';
     document.getElementById('settingsPluginDir').value = d.plugin_dir || '';
-    document.getElementById('settingsArchiveDir').value = d.archive_dir || '';
+    document.getElementById('settingsVersionsDir').value = d.versions_dir || '';
+    document.getElementById('settingsBackupDir').value = d.backup_dir || '';
+    document.getElementById('settingsOxideSnapshotDir').value = d.oxide_snapshot_dir || '';
     document.getElementById('settingsRconHost').value = d.rcon_host || '';
     document.getElementById('settingsRconPort').value = d.rcon_port || 28016;
     document.getElementById('settingsRconPass').value = d.rcon_password || '';
@@ -2861,7 +2882,9 @@ function saveSettings() {
   const pin = document.getElementById('settingsPin').value.trim();
   if (pin) data.pin = pin;
   data.plugin_dir = document.getElementById('settingsPluginDir').value.trim();
-  data.archive_dir = document.getElementById('settingsArchiveDir').value.trim();
+  data.versions_dir = document.getElementById('settingsVersionsDir').value.trim();
+  data.backup_dir = document.getElementById('settingsBackupDir').value.trim();
+  data.oxide_snapshot_dir = document.getElementById('settingsOxideSnapshotDir').value.trim();
   data.rcon_host = document.getElementById('settingsRconHost').value.trim();
   data.rcon_port = document.getElementById('settingsRconPort').value.trim();
   data.rcon_password = document.getElementById('settingsRconPass').value.trim();
