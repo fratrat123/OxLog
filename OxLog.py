@@ -26,7 +26,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.0.9"
+OXLOG_VERSION = "1.0.6"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -34,6 +34,9 @@ DEFAULT_CONFIG = {
     "app_name": "OxLog",
     "plugin_dir": "",
     "archive_dir": "",
+    "versions_dir": "",
+    "backup_dir": "",
+    "oxide_snapshot_dir": "",
     "groups": [],
     "plugins": [],
     "rcon_host": "",
@@ -110,12 +113,37 @@ def update_version_in_file(filepath, new_version):
         return False
 
 def get_versions_dir():
-    """Return the versions directory — uses backup dir if set, otherwise local"""
+    """Return the versions directory"""
     config = load_config()
+    d = config.get("versions_dir", "")
+    if d:
+        return d
     archive = config.get("archive_dir", "")
     if archive:
         return os.path.join(archive, "versions")
     return VERSIONS_DIR
+
+def get_backup_dir():
+    """Return the OxLog backup directory"""
+    config = load_config()
+    d = config.get("backup_dir", "")
+    if d:
+        return d
+    archive = config.get("archive_dir", "")
+    if archive:
+        return archive
+    return "backup"
+
+def get_oxide_snapshot_dir():
+    """Return the oxide snapshot directory"""
+    config = load_config()
+    d = config.get("oxide_snapshot_dir", "")
+    if d:
+        return d
+    archive = config.get("archive_dir", "")
+    if archive:
+        return archive
+    return "backup"
 
 def discover_plugin_files(plugin_name, plugin_dir):
     """Find config and data files associated with a plugin"""
@@ -339,6 +367,9 @@ def get_settings():
         "ok": True,
         "plugin_dir": config.get("plugin_dir", ""),
         "archive_dir": config.get("archive_dir", ""),
+        "versions_dir": config.get("versions_dir", ""),
+        "backup_dir": config.get("backup_dir", ""),
+        "oxide_snapshot_dir": config.get("oxide_snapshot_dir", ""),
         "rcon_host": config.get("rcon_host", ""),
         "rcon_port": config.get("rcon_port", 28016),
         "rcon_password": config.get("rcon_password", ""),
@@ -359,6 +390,12 @@ def save_settings():
         config["plugin_dir"] = data["plugin_dir"]
     if "archive_dir" in data:
         config["archive_dir"] = data["archive_dir"]
+    if "versions_dir" in data:
+        config["versions_dir"] = data["versions_dir"]
+    if "backup_dir" in data:
+        config["backup_dir"] = data["backup_dir"]
+    if "oxide_snapshot_dir" in data:
+        config["oxide_snapshot_dir"] = data["oxide_snapshot_dir"]
     if "rcon_host" in data:
         config["rcon_host"] = data["rcon_host"]
     if "rcon_port" in data:
@@ -1006,13 +1043,10 @@ def rcon_config():
 def archive():
     if not session.get("authed"):
         return jsonify({"ok": False}), 401
-    config = load_config()
-    archive_dir = config.get("archive_dir", "backup")
-    if not archive_dir:
-        archive_dir = "backup"
+    backup_base = get_backup_dir()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_name = f"OxLog_backup_{ts}"
-    backup_path = os.path.join(archive_dir, backup_name)
+    backup_path = os.path.join(backup_base, backup_name)
     try:
         os.makedirs(backup_path, exist_ok=True)
         for item in [CONFIG_FILE, LOG_FILE, "OxLog.py"]:
@@ -1046,12 +1080,10 @@ def oxide_snapshot():
     oxide_root = os.path.dirname(plugin_dir)
     if not os.path.isdir(oxide_root):
         return jsonify({"ok": False, "msg": "Oxide directory not found: " + oxide_root})
-    archive_dir = config.get("archive_dir", "backup")
-    if not archive_dir:
-        archive_dir = "backup"
+    snap_base = get_oxide_snapshot_dir()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     snapshot_name = f"oxide_snapshot_{ts}"
-    snapshot_path = os.path.join(archive_dir, snapshot_name)
+    snapshot_path = os.path.join(snap_base, snapshot_name)
     try:
         shutil.copytree(oxide_root, snapshot_path)
         total = 0
