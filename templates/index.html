@@ -1412,6 +1412,7 @@
             <button class="logout" style="cursor:pointer;background:none;" onclick="replayTour()">Tour</button>
             <button class="logout" style="cursor:pointer;background:none;" onclick="runBackup()">Backup</button>
             <button class="logout" style="cursor:pointer;background:none;" onclick="oxideSnapshot()">Oxide Snapshot</button>
+            <button class="logout" style="cursor:pointer;background:none;" onclick="syncPlugins()">Sync Plugins</button>
             <a href="/logout" class="logout">Logout</a>
         </div>
     </div>
@@ -1653,6 +1654,13 @@
                                 <div style="display:flex;gap:6px;">
                                     <input type="text" id="settingsOxideSnapshotDir" placeholder="backup/" style="flex:1;" />
                                     <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsOxideSnapshotDir')">Browse</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="field-label">Managed Plugins <span style="color:#333;font-size:9px;">(Sync Plugins copies here)</span></div>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="settingsManagedPluginsDir" placeholder="Not configured" style="flex:1;" />
+                                    <button class="secondary-btn" style="flex-shrink:0;" onclick="openBrowse('settingsManagedPluginsDir')">Browse</button>
                                 </div>
                             </div>
                         </div>
@@ -2870,6 +2878,7 @@ function loadSettings() {
     document.getElementById('settingsVersionsDir').value = d.versions_dir || '';
     document.getElementById('settingsBackupDir').value = d.backup_dir || '';
     document.getElementById('settingsOxideSnapshotDir').value = d.oxide_snapshot_dir || '';
+    document.getElementById('settingsManagedPluginsDir').value = d.managed_plugins_dir || '';
     document.getElementById('settingsRconHost').value = d.rcon_host || '';
     document.getElementById('settingsRconPort').value = d.rcon_port || 28016;
     document.getElementById('settingsRconPass').value = d.rcon_password || '';
@@ -2885,6 +2894,7 @@ function saveSettings() {
   data.versions_dir = document.getElementById('settingsVersionsDir').value.trim();
   data.backup_dir = document.getElementById('settingsBackupDir').value.trim();
   data.oxide_snapshot_dir = document.getElementById('settingsOxideSnapshotDir').value.trim();
+  data.managed_plugins_dir = document.getElementById('settingsManagedPluginsDir').value.trim();
   data.rcon_host = document.getElementById('settingsRconHost').value.trim();
   data.rcon_port = document.getElementById('settingsRconPort').value.trim();
   data.rcon_password = document.getElementById('settingsRconPass').value.trim();
@@ -2895,6 +2905,7 @@ function saveSettings() {
     body: JSON.stringify(data)
   }).then(r => r.json()).then(d => {
     showStatus('settingsStatus', d.ok ? 'Settings saved.' : (d.msg || 'Save failed.'), d.ok);
+    if (d.ok) loadSettings();
   }).catch(err => {
     showStatus('settingsStatus', 'Error: ' + err.message, false);
   });
@@ -3168,6 +3179,17 @@ function oxideSnapshot() {
       alert('Snapshot failed: ' + (d.msg || 'Unknown error'));
     }
   }).catch(err => alert('Snapshot error: ' + err.message));
+}
+
+function syncPlugins() {
+  if (!confirm('Copy all managed plugin files to the configured Managed Plugins directory?')) return;
+  fetch('/api/sync/plugins', { method: 'POST' }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      alert('Synced ' + d.count + ' plugins to:\n' + d.path);
+    } else {
+      alert('Sync failed: ' + (d.msg || 'Unknown error'));
+    }
+  }).catch(err => alert('Sync error: ' + err.message));
 }
 
 // Folder Browser
