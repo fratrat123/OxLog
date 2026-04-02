@@ -158,6 +158,51 @@
             overflow: hidden;
         }
 
+        .console-sidebar {
+            display: none;
+            width: 340px;
+            background: #141414;
+            border-left: 0.5px solid #2a2a2a;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .console-sidebar-header {
+            padding: 8px 12px;
+            border-bottom: 0.5px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .console-sidebar-title {
+            font-size: 11px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .console-sidebar .console-output {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+
+        .console-sidebar .console-input-row {
+            border-top: 0.5px solid #2a2a2a;
+        }
+
+        .console-sidebar .console-input {
+            font-size: 11px;
+        }
+
+        @media (min-width: 1400px) {
+            .console-sidebar {
+                display: flex;
+            }
+        }
+
         .tabs {
             display: flex;
             background: #0d0d0d;
@@ -1788,7 +1833,22 @@
                 </div>
             </div>
         </div>
-    </div>
+
+        <div class="console-sidebar" id="consoleSidebar">
+            <div class="console-sidebar-header">
+                <span class="console-sidebar-title">Console</span>
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <span id="sidebarRconStatus" style="font-size:10px;color:#333;"></span>
+                    <button class="rcon-btn" style="font-size:9px;padding:2px 6px;" id="sidebarScrollLockBtn" onclick="toggleScrollLock()">Lock</button>
+                    <button class="rcon-btn" style="font-size:9px;padding:2px 6px;" onclick="clearConsole()">Clear</button>
+                </div>
+            </div>
+            <div class="console-output" id="sidebarConsoleOutput"></div>
+            <div class="console-input-row">
+                <input type="text" class="console-input" id="sidebarConsoleInput" placeholder="RCON command..." onkeydown="if(event.key==='Enter')sendSidebarCmd()" />
+            </div>
+        </div>
+    </div> 
 
     <div id="manageOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:50;align-items:flex-start;justify-content:center;padding-top:40px;">
         <div style="background:#1a1a1a;border:0.5px solid #333;border-radius:12px;width:580px;max-height:80vh;display:flex;flex-direction:column;">
@@ -2084,6 +2144,8 @@ function selectPlugin(i) {
   if (document.getElementById('panel-history').classList.contains('active')) loadHistory();
   if (document.getElementById('panel-editor').classList.contains('active')) loadEditorCode();
   updateRconPluginActions();
+  // Auto-connect RCON if not already connected
+  if (!rconWs || rconWs.readyState > 1) rconConnect();
   setTimeout(() => {
     const activeItem = document.querySelector('.plugin-item.active');
     if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2681,6 +2743,7 @@ function saveAndReload() {
       if (rconWs && rconWs.readyState === 1) {
         rconCmd('o.reload ' + plugins[selected].name);
         showStatus('editorStatus', 'Saved & reloading plugin.', true);
+        startCompileWatch(plugins[selected].name, null);
       } else {
         showStatus('editorStatus', 'Saved. Connect RCON to auto-reload.', true);
       }
@@ -2802,33 +2865,64 @@ function rconLog(text, type) {
 }
 
 function renderConsole() {
-  const el = document.getElementById('consoleOutput');
   const filter = document.getElementById('consoleFilter').value.toLowerCase();
   let filtered = rconMessages;
   if (rconTypeFilter) filtered = filtered.filter(m => m.type === rconTypeFilter);
   if (filter) filtered = filtered.filter(m => m.text.toLowerCase().includes(filter));
-  const wasAtBottom = !consoleScrollLock && (el.scrollTop + el.clientHeight >= el.scrollHeight - 30);
-  el.innerHTML = filtered.map(m =>
+  const html = filtered.map(m =>
     '<div class="console-line' + (m.type ? ' ' + m.type : '') + '"><span style="color:#333;margin-right:8px;">' + m.ts + '</span>' + escapeHtml(m.text) + '</div>'
   ).join('');
+
+  // Main console
+  const el = document.getElementById('consoleOutput');
+  const wasAtBottom = !consoleScrollLock && (el.scrollTop + el.clientHeight >= el.scrollHeight - 30);
+  el.innerHTML = html;
   if (wasAtBottom) el.scrollTop = el.scrollHeight;
+
+  // Sidebar console (unfiltered, last 500)
+  const sideEl = document.getElementById('sidebarConsoleOutput');
+  if (sideEl) {
+    const sideHtml = rconMessages.slice(-500).map(m =>
+      '<div class="console-line' + (m.type ? ' ' + m.type : '') + '"><span style="color:#333;margin-right:6px;">' + m.ts + '</span>' + escapeHtml(m.text) + '</div>'
+    ).join('');
+    const sideWasAtBottom = !consoleScrollLock && (sideEl.scrollTop + sideEl.clientHeight >= sideEl.scrollHeight - 30);
+    sideEl.innerHTML = sideHtml;
+    if (sideWasAtBottom) sideEl.scrollTop = sideEl.scrollHeight;
+  }
 }
 
 function toggleScrollLock() {
   consoleScrollLock = !consoleScrollLock;
   var btn = document.getElementById('scrollLockBtn');
-  btn.classList.toggle('active', consoleScrollLock);
-  btn.style.borderColor = consoleScrollLock ? '#9e9e5a' : '';
-  btn.style.color = consoleScrollLock ? '#c8c87e' : '';
+  var sideBtn = document.getElementById('sidebarScrollLockBtn');
+  if (btn) {
+    btn.classList.toggle('active', consoleScrollLock);
+    btn.style.borderColor = consoleScrollLock ? '#9e9e5a' : '';
+    btn.style.color = consoleScrollLock ? '#c8c87e' : '';
+  }
+  if (sideBtn) {
+    sideBtn.style.borderColor = consoleScrollLock ? '#9e9e5a' : '';
+    sideBtn.style.color = consoleScrollLock ? '#c8c87e' : '';
+  }
   if (!consoleScrollLock) {
     var el = document.getElementById('consoleOutput');
     el.scrollTop = el.scrollHeight;
+    var sideEl = document.getElementById('sidebarConsoleOutput');
+    if (sideEl) sideEl.scrollTop = sideEl.scrollHeight;
   }
 }
 
 function clearConsole() {
   rconMessages = [];
   renderConsole();
+}
+
+function sendSidebarCmd() {
+  var input = document.getElementById('sidebarConsoleInput');
+  var cmd = input.value.trim();
+  if (!cmd) return;
+  rconCmd(cmd);
+  input.value = '';
 }
 
 function setTypeFilter(btn) {
@@ -2849,6 +2943,14 @@ function setRconStatus(state, text) {
   const dot = document.getElementById('rconDot');
   dot.className = 'rcon-dot' + (state ? ' ' + state : '');
   document.getElementById('rconStatusText').textContent = text;
+  // Sidebar status
+  var sideStatus = document.getElementById('sidebarRconStatus');
+  if (sideStatus) {
+    sideStatus.textContent = text;
+    sideStatus.style.color = state === 'connected' ? '#5a9e5a' : state === 'connecting' ? '#9e9e5a' : '#555';
+  }
+  var sideInput = document.getElementById('sidebarConsoleInput');
+  if (sideInput) sideInput.disabled = state !== 'connected';
 }
 
 // Diff
@@ -3121,12 +3223,18 @@ function renderCompileOutput() {
   el.scrollTop = el.scrollHeight;
 }
 
+let compileDismissTimer = null;
+
 function endCompileWatch(state, label) {
   if (compileWatchTimer) { clearTimeout(compileWatchTimer); compileWatchTimer = null; }
   document.getElementById('compileStatus').textContent = label;
   document.getElementById('compileStatus').className = 'compile-status' + (state ? ' ' + state : '');
   if (state === 'err') {
     document.getElementById('compileCopyBtn').style.display = '';
+  } else {
+    // Auto-dismiss after 20 seconds if no errors
+    if (compileDismissTimer) clearTimeout(compileDismissTimer);
+    compileDismissTimer = setTimeout(function() { closeCompilePopup(); }, 20000);
   }
   compileWatchCallback = null;
 }
@@ -3156,6 +3264,7 @@ function copyCompileErrors() {
 function closeCompilePopup() {
   document.getElementById('compilePopup').classList.remove('visible');
   if (compileWatchTimer) { clearTimeout(compileWatchTimer); compileWatchTimer = null; }
+  if (compileDismissTimer) { clearTimeout(compileDismissTimer); compileDismissTimer = null; }
   compileWatchCallback = null;
   compileWatchPlugin = null;
 }
