@@ -1830,6 +1830,23 @@
                             </div>
                         </div>
                     </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Remote Access <span style="color:#333;font-size:9px;">(open server folders from remote PC)</span></div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">Server Local Path <span style="color:#333;font-size:9px;">(e.g. C:\rustserver)</span></div>
+                                <input type="text" id="settingsLocalBase" placeholder="C:\rustserver" />
+                            </div>
+                            <div>
+                                <div class="field-label">UNC Network Path <span style="color:#333;font-size:9px;">(e.g. \\100.86.174.48\rustserver)</span></div>
+                                <input type="text" id="settingsUncBase" placeholder="\\100.86.174.48\rustserver" />
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <a href="/api/remote/installer" class="secondary-btn" style="text-decoration:none;padding:6px 12px;font-size:11px;display:inline-block;">Download Remote Setup</a>
+                                <span style="font-size:10px;color:#333;">Run once on each remote PC</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2045,6 +2062,8 @@
     <script>
 let plugins = {{ plugins | tojson }};
 let selected = null;
+let remoteUncBase = '';
+let remoteLocalBase = '';
 let ver = [1,0,0];
 let updateType = '';
 let scanData = [];
@@ -2238,10 +2257,19 @@ function openProjectURL() {
 }
 
 function openSnapshot(folder) {
+  openFolder(folder);
+}
+
+function openFolder(path) {
+  if (remoteUncBase && remoteLocalBase && path.toLowerCase().startsWith(remoteLocalBase.toLowerCase())) {
+    var uncPath = remoteUncBase + path.substring(remoteLocalBase.length);
+    window.open('oxlog-open://' + uncPath, '_self');
+    return;
+  }
   fetch('/api/open/snapshot', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ folder })
+    body: JSON.stringify({ folder: path })
   });
 }
 
@@ -2619,11 +2647,7 @@ function renderFileTree() {
 }
 
 function openDir(dir) {
-  fetch('/api/open/snapshot', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ folder: dir })
-  });
+  openFolder(dir);
 }
 
 function openEditorFileByPath(path) {
@@ -3062,6 +3086,10 @@ function loadSettings() {
     document.getElementById('settingsRconPort').value = d.rcon_port || 28016;
     document.getElementById('settingsRconPass').value = d.rcon_password || '';
     document.getElementById('settingsUpdateUrl').value = d.update_url || '';
+    document.getElementById('settingsUncBase').value = d.unc_base || '';
+    document.getElementById('settingsLocalBase').value = d.local_base || '';
+    remoteUncBase = d.unc_base || '';
+    remoteLocalBase = d.local_base || '';
   });
 }
 
@@ -3078,6 +3106,8 @@ function saveSettings() {
   data.rcon_port = document.getElementById('settingsRconPort').value.trim();
   data.rcon_password = document.getElementById('settingsRconPass').value.trim();
   data.update_url = document.getElementById('settingsUpdateUrl').value.trim();
+  data.unc_base = document.getElementById('settingsUncBase').value.trim();
+  data.local_base = document.getElementById('settingsLocalBase').value.trim();
   fetch('/api/settings', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -3436,6 +3466,9 @@ function loadBrowse(path) {
 }
 
 loadSidebar();
+fetch('/api/settings').then(r => r.json()).then(d => {
+  if (d.ok) { remoteUncBase = d.unc_base || ''; remoteLocalBase = d.local_base || ''; }
+});
 
 // Tour
 const tourSteps = [
