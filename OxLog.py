@@ -45,7 +45,9 @@ DEFAULT_CONFIG = {
     "rcon_password": "",
     "setup_complete": False,
     "tutorial_complete": False,
-    "update_url": ""
+    "update_url": "",
+    "unc_base": "",
+    "local_base": ""
 }
 
 def load_config():
@@ -375,7 +377,9 @@ def get_settings():
         "rcon_host": config.get("rcon_host", ""),
         "rcon_port": config.get("rcon_port", 28016),
         "rcon_password": config.get("rcon_password", ""),
-        "update_url": config.get("update_url", "")
+        "update_url": config.get("update_url", ""),
+        "unc_base": config.get("unc_base", ""),
+        "local_base": config.get("local_base", "")
     })
 
 @app.route("/api/settings", methods=["POST"])
@@ -408,6 +412,10 @@ def save_settings():
         config["rcon_password"] = data["rcon_password"]
     if "update_url" in data:
         config["update_url"] = data["update_url"]
+    if "unc_base" in data:
+        config["unc_base"] = data["unc_base"]
+    if "local_base" in data:
+        config["local_base"] = data["local_base"]
     save_config(config)
     return jsonify({"ok": True})
 
@@ -1070,6 +1078,53 @@ def tutorial_complete():
     config["tutorial_complete"] = True
     save_config(config)
     return jsonify({"ok": True})
+
+@app.route("/api/remote/installer", methods=["GET"])
+def remote_installer():
+    """Generate a self-installing .bat for the oxlog-open:// protocol handler"""
+    if not session.get("authed"):
+        return jsonify({"ok": False}), 401
+    bat_content = r'''@echo off
+title OxLog Remote Access Setup
+color 0A
+echo.
+echo  OxLog Remote Access Installer
+echo  ===============================
+echo.
+echo  This will register the oxlog-open:// protocol
+echo  so OxLog can open server folders on this PC.
+echo.
+pause
+
+:: Create install directory
+set "INSTALL_DIR=%LOCALAPPDATA%\OxLog"
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+
+:: Write the protocol handler script
+(
+echo @echo off
+echo set "url=%%~1"
+echo set "url=%%url:oxlog-open://=%%"
+echo set "url=%%url:oxlog-open:=%%"
+echo if "%%url%%"=="" exit /b
+echo start "" explorer "%%url%%"
+) > "%INSTALL_DIR%\oxlog-open.bat"
+
+:: Register protocol in registry
+reg add "HKCU\Software\Classes\oxlog-open" /ve /d "URL:OxLog Open Protocol" /f >nul 2>&1
+reg add "HKCU\Software\Classes\oxlog-open" /v "URL Protocol" /d "" /f >nul 2>&1
+reg add "HKCU\Software\Classes\oxlog-open\shell\open\command" /ve /d "\"%INSTALL_DIR%\oxlog-open.bat\" \"%%1\"" /f >nul 2>&1
+
+echo.
+echo  Done! The oxlog-open:// protocol is now registered.
+echo  OxLog folder buttons will now open Explorer on this PC.
+echo.
+echo  You can close this window.
+pause
+'''
+    from flask import Response
+    return Response(bat_content, mimetype='application/octet-stream',
+                    headers={'Content-Disposition': 'attachment; filename=oxlog-remote-setup.bat'})
 
 @app.route("/api/oxide/snapshot", methods=["POST"])
 def oxide_snapshot():
