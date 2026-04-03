@@ -26,7 +26,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.1.6"
+OXLOG_VERSION = "1.1.3"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -1104,6 +1104,7 @@ if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 (
 echo @echo off
 echo set "url=%%~1"
+echo for /f "tokens=*" %%%%a in ('powershell -noprofile -command "[System.Uri]::UnescapeDataString('%%url%%')"') do set "url=%%%%a"
 echo set "url=%%url:oxlog-open://=%%"
 echo set "url=%%url:oxlog-open:=%%"
 echo if "%%url%%"=="" exit /b
