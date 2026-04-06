@@ -47,9 +47,7 @@ DEFAULT_CONFIG = {
     "tutorial_complete": False,
     "update_url": "",
     "unc_base": "",
-    "local_base": "",
-    "github_token": "",
-    "github_repo": ""
+    "local_base": ""
 }
 
 def load_config():
@@ -389,9 +387,7 @@ def get_settings():
         "rcon_password": config.get("rcon_password", ""),
         "update_url": config.get("update_url", ""),
         "unc_base": config.get("unc_base", ""),
-        "local_base": config.get("local_base", ""),
-        "github_repo": config.get("github_repo", ""),
-        "github_token_set": bool(config.get("github_token", ""))
+        "local_base": config.get("local_base", "")
     })
 
 @app.route("/api/settings", methods=["POST"])
@@ -428,10 +424,6 @@ def save_settings():
         config["unc_base"] = data["unc_base"]
     if "local_base" in data:
         config["local_base"] = data["local_base"]
-    if "github_repo" in data:
-        config["github_repo"] = data["github_repo"]
-    if "github_token" in data and data["github_token"]:
-        config["github_token"] = data["github_token"]
     save_config(config)
     return jsonify({"ok": True})
 
@@ -1094,93 +1086,6 @@ def tutorial_complete():
     config["tutorial_complete"] = True
     save_config(config)
     return jsonify({"ok": True})
-
-@app.route("/api/github/push", methods=["POST"])
-def github_push():
-    """Push OxLog files to GitHub repo"""
-    if not session.get("authed"):
-        return jsonify({"ok": False}), 401
-    config = load_config()
-    token = config.get("github_token", "")
-    repo = config.get("github_repo", "")
-    if not token or not repo:
-        return jsonify({"ok": False, "msg": "GitHub token and repo not configured in Settings."})
-
-    import base64
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    api_base = f"https://api.github.com/repos/{repo}/contents"
-
-    # Files to push: local path -> repo path
-    push_files = {
-        "OxLog.py": "OxLog.py",
-        "start.bat": "start.bat",
-        "install.bat": "install.bat",
-        "version.json": "version.json",
-        os.path.join("templates", "index.html"): "templates/index.html",
-        os.path.join("templates", "login.html"): "templates/login.html",
-        os.path.join("templates", "setup.html"): "templates/setup.html",
-    }
-
-    # Auto-generate version.json
-    version_data = {
-        "version": OXLOG_VERSION,
-        "files": ["OxLog.py", "templates/index.html", "templates/login.html",
-                  "templates/setup.html", "start.bat", "install.bat"],
-        "base_url": f"https://raw.githubusercontent.com/{repo}/main",
-        "notes": request.json.get("notes", "")
-    }
-    import json as jsonmod
-    version_content = jsonmod.dumps(version_data, indent=2)
-
-    pushed = 0
-    errors = []
-
-    for local_path, repo_path in push_files.items():
-        try:
-            # Read file content
-            if local_path == "version.json":
-                content = version_content.encode("utf-8")
-            else:
-                if not os.path.exists(local_path):
-                    continue
-                with open(local_path, "rb") as f:
-                    content = f.read()
-
-            encoded = base64.b64encode(content).decode("utf-8")
-
-            # Get current file SHA (if it exists)
-            sha = None
-            try:
-                r = requests.get(f"{api_base}/{repo_path}", headers=headers, timeout=10)
-                if r.ok:
-                    sha = r.json().get("sha")
-            except Exception:
-                pass
-
-            # Push file
-            payload = {
-                "message": f"OxLog v{OXLOG_VERSION}",
-                "content": encoded,
-                "branch": "main"
-            }
-            if sha:
-                payload["sha"] = sha
-
-            r = requests.put(f"{api_base}/{repo_path}", headers=headers,
-                           json=payload, timeout=15)
-            if r.ok or r.status_code == 201:
-                pushed += 1
-            else:
-                errors.append(f"{repo_path}: {r.status_code}")
-        except Exception as e:
-            errors.append(f"{repo_path}: {str(e)}")
-
-    if errors:
-        return jsonify({"ok": False, "msg": f"Pushed {pushed} files, errors: " + ", ".join(errors)})
-    return jsonify({"ok": True, "count": pushed})
 
 @app.route("/api/remote/installer", methods=["GET"])
 def remote_installer():
