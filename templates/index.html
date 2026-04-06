@@ -1741,7 +1741,7 @@
 
             <div class="panel" id="panel-settings" style="max-width:500px;">
                 <div style="font-size:14px;font-weight:500;color:#ccc;margin-bottom:4px;">Settings</div>
-                <div style="font-size:11px;color:#444;margin-bottom:16px;">Changes are saved immediately.</div>
+                <div style="font-size:11px;color:#444;margin-bottom:16px;">Click Save Settings at the bottom to apply changes.</div>
                 <div style="display:flex;flex-direction:column;gap:14px;">
                     <div>
                         <div class="field-label">PIN (4 digits)</div>
@@ -1806,30 +1806,6 @@
                             </div>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <button class="action-btn" onclick="saveSettings()">Save Settings</button>
-                        <button class="secondary-btn" onclick="replayTour()">Replay Tour</button>
-                        <span id="settingsStatus"></span>
-                    </div>
-                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
-                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Updates</div>
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            <div>
-                                <div class="field-label">Update URL <span style="color:#333;font-size:9px;">(version.json URL — leave blank to use default)</span></div>
-                                <input type="text" id="settingsUpdateUrl" placeholder="https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json" />
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <button class="secondary-btn" onclick="checkForUpdate()">Check for Updates</button>
-                                <span id="updateCheckStatus" style="font-size:11px;color:#555;"></span>
-                            </div>
-                            <div id="updateAvailable" style="display:none;background:#1a2a1a;border:0.5px solid #2a3a2a;border-radius:8px;padding:12px 14px;">
-                                <div style="font-size:12px;color:#7ec87e;margin-bottom:6px;" id="updateVersionInfo"></div>
-                                <div style="font-size:11px;color:#888;margin-bottom:10px;" id="updateNotes"></div>
-                                <button class="action-btn" style="font-size:11px;padding:6px 14px;" onclick="applyUpdate()">Download &amp; Apply Update</button>
-                                <span id="updateApplyStatus" style="font-size:11px;color:#555;margin-left:8px;"></span>
-                            </div>
-                        </div>
-                    </div>
                     <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
                         <div style="font-size:12px;color:#555;margin-bottom:10px;">Remote Access <span style="color:#333;font-size:9px;">(open server folders from remote PC)</span></div>
                         <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1846,6 +1822,48 @@
                                 <span style="font-size:10px;color:#333;">Run once on each remote PC</span>
                             </div>
                         </div>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Updates</div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">Update URL <span style="color:#333;font-size:9px;">(leave blank to use default)</span></div>
+                                <input type="text" id="settingsUpdateUrl" placeholder="https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json" />
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button class="secondary-btn" onclick="checkForUpdate()">Check for Updates</button>
+                                <span id="updateCheckStatus" style="font-size:11px;color:#555;"></span>
+                            </div>
+                            <div id="updateAvailable" style="display:none;background:#1a2a1a;border:0.5px solid #2a3a2a;border-radius:8px;padding:12px 14px;">
+                                <div style="font-size:12px;color:#7ec87e;margin-bottom:6px;" id="updateVersionInfo"></div>
+                                <div style="font-size:11px;color:#888;margin-bottom:10px;" id="updateNotes"></div>
+                                <button class="action-btn" style="font-size:11px;padding:6px 14px;" onclick="applyUpdate()">Download &amp; Apply Update</button>
+                                <span id="updateApplyStatus" style="font-size:11px;color:#555;margin-left:8px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">GitHub <span style="color:#333;font-size:9px;">(push releases to your repo)</span></div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div>
+                                <div class="field-label">Repository <span style="color:#333;font-size:9px;">(owner/repo)</span></div>
+                                <input type="text" id="settingsGithubRepo" placeholder="username/OxLog" />
+                            </div>
+                            <div>
+                                <div class="field-label">Personal Access Token <span style="color:#333;font-size:9px;">(needs repo scope)</span></div>
+                                <input type="password" id="settingsGithubToken" placeholder="ghp_..." />
+                                <div style="font-size:10px;color:#333;margin-top:3px;" id="githubTokenStatus"></div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button class="secondary-btn" onclick="pushToGithub()">Push to GitHub</button>
+                                <span id="githubPushStatus" style="font-size:11px;color:#555;"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:8px;display:flex;align-items:center;gap:12px;">
+                        <button class="action-btn" onclick="saveSettings()">Save Settings</button>
+                        <button class="secondary-btn" onclick="replayTour()">Replay Tour</button>
+                        <span id="settingsStatus"></span>
                     </div>
                 </div>
             </div>
@@ -2003,19 +2021,49 @@
                 <div class="help-section">
                     <div class="help-section-title">Paste Code Workflow</div>
                     <div class="help-section-body">
-                        Copy your updated plugin code to the clipboard, click <strong style="color:#ccc;">Paste Code</strong>, review it, then click <strong style="color:#ccc;">Use This Code</strong>. A green bar appears confirming the code is staged. When you hit Log &amp; Push, the code is written to the live <code>.cs</code> file, the <code>[Info]</code> version is updated, a snapshot is saved, and the changelog is pushed to Discord — all in one click.
+                        Copy your updated plugin code to the clipboard, click <strong style="color:#ccc;">Paste Code</strong>, review the line count comparison, then click <strong style="color:#ccc;">Use This Code</strong>. OxLog validates that the pasted code's <code>[Info]</code> plugin name matches the selected plugin. A green staged bar shows the line count diff. Click <strong style="color:#ccc;">Preview Diff</strong> to see exactly what changed before pushing. When you hit Log &amp; Push, the code is written to the live file, version-stamped, snapshotted with config/data files, and pushed to Discord.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Editor</div>
+                    <div class="help-section-body">
+                        The Editor tab provides a full code editor with C# and JSON syntax highlighting, line numbers, auto-closing brackets, and code folding. The file tree sidebar shows the plugin <code>.cs</code> file, its config JSON from <code>oxide/config/</code>, and data files from <code>oxide/data/</code>. Use <strong style="color:#ccc;">Save &amp; Reload</strong> for config/data files to save and reload the plugin via RCON in one click. Use <strong style="color:#ccc;">Save &amp; Log</strong> for <code>.cs</code> files to stage code and jump to Log Update.
                     </div>
                 </div>
                 <div class="help-section">
                     <div class="help-section-title">Snapshots &amp; Reverting</div>
                     <div class="help-section-body">
-                        Every log entry snapshots the full <code>.cs</code> file along with a <code>notes.txt</code>. In the History tab, click <strong style="color:#ccc;">Diff</strong> to see exactly what changed, or <strong style="color:#ccc;">Revert</strong> to roll back. Reverting snapshots the current live file first (so you never lose anything), then restores the selected version.
+                        Every log entry snapshots the full plugin state: the <code>.cs</code> file, config JSON, and data files. In the History tab, click <strong style="color:#ccc;">Code</strong> to view the snapshot source, <strong style="color:#ccc;">Diff</strong> to compare versions, or <strong style="color:#ccc;">Revert</strong> to roll back. Reverting restores the <code>.cs</code>, config, and data files, and snapshots the current state first so you never lose anything.
                     </div>
                 </div>
                 <div class="help-section">
-                    <div class="help-section-title">RCON Console</div>
+                    <div class="help-section-title">Search</div>
                     <div class="help-section-body">
-                        Set your server's <code>+rcon.password</code> and port in Settings, then click <strong style="color:#ccc;">Connect</strong> in the Console tab. Oxide auto-compiles when files change, but you can manually <strong style="color:#ccc;">Load</strong>, <strong style="color:#ccc;">Unload</strong>, or <strong style="color:#ccc;">Reload</strong> plugins. Use the filter to show only output from a specific plugin, or click <strong style="color:#ccc;">Errors</strong> to isolate problems.
+                        The Search tab greps across all tracked <code>.cs</code> files. Find effect paths, hook names, item shortnames — click any result to jump to that exact line in the Editor.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">RCON Console &amp; Compile Watch</div>
+                    <div class="help-section-body">
+                        RCON auto-connects when you select a plugin. Use the Console tab for full filtering, or the sidebar console on wide screens. After pushing code, a compile popup captures plugin-specific output for 20 seconds — green for success, red for errors with a <strong style="color:#ccc;">Copy Errors</strong> button. Use <strong style="color:#ccc;">Scroll Lock</strong> to freeze the console while reading, and <strong style="color:#ccc;">Clear</strong> to wipe the buffer.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Backups &amp; Sync</div>
+                    <div class="help-section-body">
+                        <strong style="color:#ccc;">Backup</strong> saves OxLog app files. <strong style="color:#ccc;">Oxide Snapshot</strong> copies the entire oxide directory. <strong style="color:#ccc;">Sync Plugins</strong> copies all managed <code>.cs</code> files to a clean backed-up folder. Each has its own configurable save path in Settings.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Remote Access</div>
+                    <div class="help-section-body">
+                        To open server folders from a remote PC: go to Settings &gt; Remote Access, set the server local path and UNC network path, then click <strong style="color:#ccc;">Download Remote Setup</strong> and run the installer on your remote PC. After that, all folder buttons open Explorer on your machine pointing to the server share.
+                    </div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Auto-Updates</div>
+                    <div class="help-section-body">
+                        Go to Settings &gt; Updates &gt; <strong style="color:#ccc;">Check for Updates</strong>. If a new version is available, click <strong style="color:#ccc;">Download &amp; Apply</strong>. OxLog downloads the files, stages them, and restarts automatically. A splash screen confirms the update on next login.
                     </div>
                 </div>
                 <div class="help-section">
@@ -2025,7 +2073,7 @@
                     </div>
                 </div>
                 <div class="help-section">
-                    <div class="help-section-title">Remote Access &amp; Clipboard</div>
+                    <div class="help-section-title">Clipboard &amp; Chrome</div>
                     <div class="help-section-body">
                         If Paste Code shows a clipboard error over Tailscale or LAN, go to <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>, add your OxLog URL (e.g. <code>http://100.x.x.x:5000</code>), enable it, and relaunch Chrome. OxLog will guide you through this automatically if it happens.
                     </div>
@@ -2042,7 +2090,11 @@
         <div class="update-splash-box">
             <div style="font-size:22px;color:#7ec87e;margin-bottom:6px;">OxLog Updated</div>
             <div style="font-size:14px;color:#ccc;margin-bottom:4px;">Now running <span style="color:#7ec87e;font-weight:500;">v{{ version }}</span></div>
+            {% if update_notes %}
+            <div style="font-size:12px;color:#888;margin:12px 0;padding:10px 14px;background:#0d0d0d;border:0.5px solid #2a2a2a;border-radius:8px;text-align:left;line-height:1.6;max-height:200px;overflow-y:auto;">{{ update_notes }}</div>
+            {% else %}
             <div style="font-size:11px;color:#555;margin-bottom:20px;">Update applied automatically on restart.</div>
+            {% endif %}
             <button class="action-btn" onclick="document.getElementById('updateSplash').style.display='none'">Got It</button>
         </div>
     </div>
@@ -2328,12 +2380,32 @@ function loadHistory() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
         <div class="log-folder" style="cursor:pointer;margin:0;" onclick="openSnapshot('${e.folder.replace(/\\/g, '\\\\')}')">open snapshot folder</div>
         <div style="display:flex;gap:6px;">
+            <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="showSnapshotCode('${e.plugin}','${e.folder.replace(/\\/g, '\\\\')}')">Code</button>
             <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="showDiff('${e.plugin}','${e.version}','${e.folder.replace(/\\/g, '\\\\')}')">Diff</button>
             <button class="secondary-btn" style="padding:4px 10px;font-size:11px;" onclick="revertToSnapshot('${e.plugin}','${e.version}','${e.folder.replace(/\\/g, '\\\\')}')">Revert</button>
         </div>
     </div>
 </div>`).join('');
         });
+}
+
+function showSnapshotCode(pluginName, folder) {
+  // Find the plugin's .cs filename
+  var pfile = '';
+  for (var i = 0; i < plugins.length; i++) {
+    if (plugins[i].name === pluginName) { pfile = plugins[i].file; break; }
+  }
+  if (!pfile) return;
+  fetch('/api/plugin/code', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plugin: pluginName, filepath: folder + '\\' + pfile })
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) { alert(d.msg || 'Failed to load snapshot code'); return; }
+    document.getElementById('codePreview').textContent = d.code;
+    document.getElementById('codeStats').textContent = d.code.split('\n').length + ' lines \u00b7 ' + d.code.length.toLocaleString() + ' chars';
+    document.getElementById('codeModal').style.display = 'flex';
+  });
 }
 
 function revertToSnapshot(pluginName, version, folder) {
@@ -2509,6 +2581,20 @@ function closeClipboardHelp() {
 
 function useThisCode() {
   pendingCode = document.getElementById('codePreview').textContent;
+  // Validate plugin name matches
+  if (selected !== null) {
+    var match = pendingCode.match(/\[Info\s*\(\s*"([^"]+)"/);
+    if (match) {
+      var pastedName = match[1];
+      var selectedName = plugins[selected].name;
+      if (pastedName.toLowerCase() !== selectedName.toLowerCase()) {
+        if (!confirm('Warning: The pasted code is for "' + pastedName + '" but you have "' + selectedName + '" selected.\n\nAre you sure you want to continue?')) {
+          pendingCode = null;
+          return;
+        }
+      }
+    }
+  }
   const newLines = pendingCode.split('\n').length;
   document.getElementById('stagedBar').classList.add('visible');
   closeCodeModal();
@@ -3094,6 +3180,9 @@ function loadSettings() {
     document.getElementById('settingsLocalBase').value = d.local_base || '';
     remoteUncBase = d.unc_base || '';
     remoteLocalBase = d.local_base || '';
+    document.getElementById('settingsGithubRepo').value = d.github_repo || '';
+    document.getElementById('settingsGithubToken').value = '';
+    document.getElementById('githubTokenStatus').textContent = d.github_token_set ? 'Token saved' : '';
   });
 }
 
@@ -3112,6 +3201,9 @@ function saveSettings() {
   data.update_url = document.getElementById('settingsUpdateUrl').value.trim();
   data.unc_base = document.getElementById('settingsUncBase').value.trim();
   data.local_base = document.getElementById('settingsLocalBase').value.trim();
+  data.github_repo = document.getElementById('settingsGithubRepo').value.trim();
+  var ghToken = document.getElementById('settingsGithubToken').value.trim();
+  if (ghToken) data.github_token = ghToken;
   fetch('/api/settings', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -3148,7 +3240,7 @@ function checkForUpdate() {
       document.getElementById('updateNotes').textContent = d.notes || '';
       document.getElementById('updateAvailable').style.display = 'block';
       document.getElementById('updateApplyStatus').textContent = '';
-      pendingUpdate = { base_url: d.base_url, files: d.files };
+      pendingUpdate = { base_url: d.base_url, files: d.files, notes: d.notes || '' };
     } else {
       document.getElementById('updateCheckStatus').textContent = 'You\'re on the latest version (v' + d.current + ')';
     }
@@ -3181,6 +3273,36 @@ function applyUpdate() {
     }
   }).catch(function(err) {
     document.getElementById('updateApplyStatus').textContent = 'Error: ' + err.message;
+  });
+}
+
+function pushToGithub() {
+  var notes = prompt('Release notes for this push (optional):');
+  if (notes === null) return; // cancelled
+  document.getElementById('githubPushStatus').textContent = 'Pushing...';
+  // Save settings first in case token was just entered
+  var data = {};
+  data.github_repo = document.getElementById('settingsGithubRepo').value.trim();
+  var ghToken = document.getElementById('settingsGithubToken').value.trim();
+  if (ghToken) data.github_token = ghToken;
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  }).then(function() {
+    return fetch('/api/github/push', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ notes: notes })
+    });
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      document.getElementById('githubPushStatus').innerHTML = '<span style="color:#7ec87e;">Pushed ' + d.count + ' files to GitHub</span>';
+    } else {
+      document.getElementById('githubPushStatus').textContent = d.msg || 'Push failed.';
+    }
+  }).catch(function(err) {
+    document.getElementById('githubPushStatus').textContent = 'Error: ' + err.message;
   });
 }
 
