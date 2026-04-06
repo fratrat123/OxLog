@@ -1842,24 +1842,6 @@
                             </div>
                         </div>
                     </div>
-                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
-                        <div style="font-size:12px;color:#555;margin-bottom:10px;">GitHub <span style="color:#333;font-size:9px;">(push releases to your repo)</span></div>
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            <div>
-                                <div class="field-label">Repository <span style="color:#333;font-size:9px;">(owner/repo)</span></div>
-                                <input type="text" id="settingsGithubRepo" placeholder="username/OxLog" />
-                            </div>
-                            <div>
-                                <div class="field-label">Personal Access Token <span style="color:#333;font-size:9px;">(needs repo scope)</span></div>
-                                <input type="password" id="settingsGithubToken" placeholder="ghp_..." />
-                                <div style="font-size:10px;color:#333;margin-top:3px;" id="githubTokenStatus"></div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <button class="secondary-btn" onclick="pushToGithub()">Push to GitHub</button>
-                                <span id="githubPushStatus" style="font-size:11px;color:#555;"></span>
-                            </div>
-                        </div>
-                    </div>
                     <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:8px;display:flex;align-items:center;gap:12px;">
                         <button class="action-btn" onclick="saveSettings()">Save Settings</button>
                         <button class="secondary-btn" onclick="replayTour()">Replay Tour</button>
@@ -2259,6 +2241,9 @@ function submitUpdate() {
   const payload = { plugin: plugins[selected].name, version: 'v'+ver.join('.'), type: updateType, notes };
   const hadCode = !!pendingCode;
   const pushPluginName = plugins[selected].name;
+  const pushVersion = 'v'+ver.join('.');
+  const pushType = updateType;
+  const pushNotes = notes;
   if (pendingCode) payload.code = pendingCode;
   fetch('/api/log', {
     method: 'POST',
@@ -2282,7 +2267,7 @@ function submitUpdate() {
       document.querySelectorAll('.pill[data-type]').forEach(function(el) { el.classList.remove('pill-selected'); });
       loadSidebar();
       if (hadCode) {
-        startCompileWatch(pushPluginName, d.snapshot);
+        startCompileWatch(pushPluginName, d.snapshot, { version: pushVersion, type: pushType, notes: pushNotes });
       }
     } else {
       showStatus('updateStatus', d.msg || 'Log failed.', false);
@@ -3180,9 +3165,6 @@ function loadSettings() {
     document.getElementById('settingsLocalBase').value = d.local_base || '';
     remoteUncBase = d.unc_base || '';
     remoteLocalBase = d.local_base || '';
-    document.getElementById('settingsGithubRepo').value = d.github_repo || '';
-    document.getElementById('settingsGithubToken').value = '';
-    document.getElementById('githubTokenStatus').textContent = d.github_token_set ? 'Token saved' : '';
   });
 }
 
@@ -3201,9 +3183,6 @@ function saveSettings() {
   data.update_url = document.getElementById('settingsUpdateUrl').value.trim();
   data.unc_base = document.getElementById('settingsUncBase').value.trim();
   data.local_base = document.getElementById('settingsLocalBase').value.trim();
-  data.github_repo = document.getElementById('settingsGithubRepo').value.trim();
-  var ghToken = document.getElementById('settingsGithubToken').value.trim();
-  if (ghToken) data.github_token = ghToken;
   fetch('/api/settings', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -3276,52 +3255,33 @@ function applyUpdate() {
   });
 }
 
-function pushToGithub() {
-  var notes = prompt('Release notes for this push (optional):');
-  if (notes === null) return; // cancelled
-  document.getElementById('githubPushStatus').textContent = 'Pushing...';
-  // Save settings first in case token was just entered
-  var data = {};
-  data.github_repo = document.getElementById('settingsGithubRepo').value.trim();
-  var ghToken = document.getElementById('settingsGithubToken').value.trim();
-  if (ghToken) data.github_token = ghToken;
-  fetch('/api/settings', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(data)
-  }).then(function() {
-    return fetch('/api/github/push', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ notes: notes })
-    });
-  }).then(r => r.json()).then(d => {
-    if (d.ok) {
-      document.getElementById('githubPushStatus').innerHTML = '<span style="color:#7ec87e;">Pushed ' + d.count + ' files to GitHub</span>';
-    } else {
-      document.getElementById('githubPushStatus').textContent = d.msg || 'Push failed.';
-    }
-  }).catch(function(err) {
-    document.getElementById('githubPushStatus').textContent = 'Error: ' + err.message;
-  });
-}
-
 // Compile Watch
 let compileWatchPlugin = null;
 let compileWatchTimer = null;
 let compileWatchLines = [];
 let compileWatchCallback = null;
 
-function startCompileWatch(pluginName, snapshotPath) {
+function startCompileWatch(pluginName, snapshotPath, pushInfo) {
   compileWatchPlugin = pluginName;
   compileWatchLines = [];
-  document.getElementById('compileTitle').textContent = pluginName + ' \u2014 Compile';
+  var title = pluginName + ' \u2014 Compile';
+  if (pushInfo && pushInfo.version) {
+    title = pluginName + ' ' + pushInfo.version + ' \u2014 ' + (pushInfo.type || 'Update');
+  }
+  document.getElementById('compileTitle').textContent = title;
   document.getElementById('compileBody').innerHTML = '';
   document.getElementById('compilePopup').classList.add('visible');
   document.getElementById('compileCopyBtn').style.display = 'none';
 
+  if (pushInfo && pushInfo.notes) {
+    compileWatchLines.push({ text: pushInfo.notes, type: '' });
+  }
   if (snapshotPath) {
     compileWatchLines.push({ text: 'Snapshot: ' + snapshotPath, type: '' });
+  }
+  if (compileWatchLines.length) {
+    compileWatchLines.push({ text: '\u2500'.repeat(40), type: '' });
+    renderCompileOutput();
   }
 
   if (!rconWs || rconWs.readyState !== 1) {
