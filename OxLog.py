@@ -26,7 +26,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.1.7"
+OXLOG_VERSION = "1.2.0"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -47,7 +47,9 @@ DEFAULT_CONFIG = {
     "tutorial_complete": False,
     "update_url": "",
     "unc_base": "",
-    "local_base": ""
+    "local_base": "",
+    "github_token": "",
+    "github_repo": ""
 }
 
 def load_config():
@@ -224,11 +226,19 @@ def index():
         return redirect("/login")
     config = load_config()
     just_updated = False
+    update_notes = ""
     flag = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".updated")
     if os.path.exists(flag):
         just_updated = True
+        try:
+            with open(flag, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            if content and content != "ok":
+                update_notes = content
+        except Exception:
+            pass
         os.remove(flag)
-    return render_template("index.html", plugins=config["plugins"], show_tutorial=not config.get("tutorial_complete", False), version=OXLOG_VERSION, just_updated=just_updated)
+    return render_template("index.html", plugins=config["plugins"], show_tutorial=not config.get("tutorial_complete", False), version=OXLOG_VERSION, just_updated=just_updated, update_notes=update_notes)
 
 @app.route("/setup", methods=["GET"])
 def setup():
@@ -379,7 +389,9 @@ def get_settings():
         "rcon_password": config.get("rcon_password", ""),
         "update_url": config.get("update_url", ""),
         "unc_base": config.get("unc_base", ""),
-        "local_base": config.get("local_base", "")
+        "local_base": config.get("local_base", ""),
+        "github_repo": config.get("github_repo", ""),
+        "github_token_set": bool(config.get("github_token", ""))
     })
 
 @app.route("/api/settings", methods=["POST"])
@@ -416,6 +428,10 @@ def save_settings():
         config["unc_base"] = data["unc_base"]
     if "local_base" in data:
         config["local_base"] = data["local_base"]
+    if "github_repo" in data:
+        config["github_repo"] = data["github_repo"]
+    if "github_token" in data and data["github_token"]:
+        config["github_token"] = data["github_token"]
     save_config(config)
     return jsonify({"ok": True})
 
@@ -1079,6 +1095,93 @@ def tutorial_complete():
     save_config(config)
     return jsonify({"ok": True})
 
+@app.route("/api/github/push", methods=["POST"])
+def github_push():
+    """Push OxLog files to GitHub repo"""
+    if not session.get("authed"):
+        return jsonify({"ok": False}), 401
+    config = load_config()
+    token = config.get("github_token", "")
+    repo = config.get("github_repo", "")
+    if not token or not repo:
+        return jsonify({"ok": False, "msg": "GitHub token and repo not configured in Settings."})
+
+    import base64
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    api_base = f"https://api.github.com/repos/{repo}/contents"
+
+    # Files to push: local path -> repo path
+    push_files = {
+        "OxLog.py": "OxLog.py",
+        "start.bat": "start.bat",
+        "install.bat": "install.bat",
+        "version.json": "version.json",
+        os.path.join("templates", "index.html"): "templates/index.html",
+        os.path.join("templates", "login.html"): "templates/login.html",
+        os.path.join("templates", "setup.html"): "templates/setup.html",
+    }
+
+    # Auto-generate version.json
+    version_data = {
+        "version": OXLOG_VERSION,
+        "files": ["OxLog.py", "templates/index.html", "templates/login.html",
+                  "templates/setup.html", "start.bat", "install.bat"],
+        "base_url": f"https://raw.githubusercontent.com/{repo}/main",
+        "notes": request.json.get("notes", "")
+    }
+    import json as jsonmod
+    version_content = jsonmod.dumps(version_data, indent=2)
+
+    pushed = 0
+    errors = []
+
+    for local_path, repo_path in push_files.items():
+        try:
+            # Read file content
+            if local_path == "version.json":
+                content = version_content.encode("utf-8")
+            else:
+                if not os.path.exists(local_path):
+                    continue
+                with open(local_path, "rb") as f:
+                    content = f.read()
+
+            encoded = base64.b64encode(content).decode("utf-8")
+
+            # Get current file SHA (if it exists)
+            sha = None
+            try:
+                r = requests.get(f"{api_base}/{repo_path}", headers=headers, timeout=10)
+                if r.ok:
+                    sha = r.json().get("sha")
+            except Exception:
+                pass
+
+            # Push file
+            payload = {
+                "message": f"OxLog v{OXLOG_VERSION}",
+                "content": encoded,
+                "branch": "main"
+            }
+            if sha:
+                payload["sha"] = sha
+
+            r = requests.put(f"{api_base}/{repo_path}", headers=headers,
+                           json=payload, timeout=15)
+            if r.ok or r.status_code == 201:
+                pushed += 1
+            else:
+                errors.append(f"{repo_path}: {r.status_code}")
+        except Exception as e:
+            errors.append(f"{repo_path}: {str(e)}")
+
+    if errors:
+        return jsonify({"ok": False, "msg": f"Pushed {pushed} files, errors: " + ", ".join(errors)})
+    return jsonify({"ok": True, "count": pushed})
+
 @app.route("/api/remote/installer", methods=["GET"])
 def remote_installer():
     """Generate a self-installing .bat for the oxlog-open:// protocol handler"""
@@ -1257,6 +1360,12 @@ def update_apply():
             with open(dest, "wb") as f:
                 f.write(r.content)
 
+        # Save release notes for the splash screen
+        notes = data.get("notes", "")
+        if notes:
+            with open(os.path.join(staging, ".update_notes"), "w", encoding="utf-8") as f:
+                f.write(notes)
+
         return jsonify({"ok": True, "backup": pre_update,
                         "msg": "Update staged. Restarting OxLog..."})
     except Exception as e:
@@ -1282,8 +1391,16 @@ if __name__ == "__main__":
     if os.path.isdir(pending):
         print("  Applying pending update...")
         try:
+            # Read release notes before copying
+            update_notes = ""
+            notes_file = os.path.join(pending, ".update_notes")
+            if os.path.exists(notes_file):
+                with open(notes_file, "r", encoding="utf-8") as f:
+                    update_notes = f.read().strip()
             for root, dirs, files in os.walk(pending):
                 for f in files:
+                    if f == ".update_notes":
+                        continue
                     src = os.path.join(root, f)
                     rel = os.path.relpath(src, pending)
                     dest = os.path.join(app_dir, rel)
@@ -1301,9 +1418,9 @@ if __name__ == "__main__":
                             break
             except Exception:
                 pass
-            # Write flag so the UI shows a splash
-            with open(os.path.join(app_dir, ".updated"), "w") as f:
-                f.write("ok")
+            # Write flag with notes so the UI shows a splash
+            with open(os.path.join(app_dir, ".updated"), "w", encoding="utf-8") as f:
+                f.write(update_notes or "ok")
             print("  Update applied successfully.")
         except Exception as e:
             print(f"  Update failed: {e}")

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.7",
+  "version": "1.2.0",
   "files": [
     "OxLog.py",
     "templates/index.html",
@@ -9,5 +9,5 @@
     "install.bat"
   ],
   "base_url": "https://raw.githubusercontent.com/fratrat123/OxLog/main",
-  "notes": "Auto-restart on update, full plugin state snapshots, backup dir for versions"
+  "notes": "Show Code in history, plugin name validation on paste, help guide overhaul, Push to GitHub, changelog on update splash, settings reorganization"
 }
