@@ -1192,6 +1192,28 @@ def sync_plugins():
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
 
+def remove_dir_robust(path, attempts=5):
+    """rmtree that survives Windows 'Access is denied' from read-only files or
+    handles briefly held by Explorer/antivirus. Returns True if removed."""
+    import time, stat
+    def on_error(func, p, exc_info):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            func(p)
+        except Exception:
+            pass
+    for i in range(attempts):
+        shutil.rmtree(path, onerror=on_error)
+        if not os.path.exists(path):
+            return True
+        time.sleep(0.5 * (i + 1))
+    # Couldn't delete — move it out of the way so it isn't re-applied
+    try:
+        os.rename(path, path + "_stale_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+        return True
+    except Exception:
+        return False
+
 @app.route("/api/update/check", methods=["GET"])
 def update_check():
     if not session.get("authed"):
@@ -1251,8 +1273,8 @@ def update_apply():
 
         # Download each file to staging
         staging = os.path.join(backup_dir, "pending_update")
-        if os.path.isdir(staging):
-            shutil.rmtree(staging)
+        if os.path.isdir(staging) and not remove_dir_robust(staging):
+            return jsonify({"ok": False, "msg": f"Couldn't clear old staging folder: {staging}. Close anything using it and try again."})
         os.makedirs(staging, exist_ok=True)
 
         for fname in files:
@@ -1302,6 +1324,7 @@ if __name__ == "__main__":
             if os.path.exists(notes_file):
                 with open(notes_file, "r", encoding="utf-8") as f:
                     update_notes = f.read().strip()
+            copied = 0
             for root, dirs, files in os.walk(pending):
                 for f in files:
                     if f == ".update_notes":
@@ -1311,22 +1334,26 @@ if __name__ == "__main__":
                     dest = os.path.join(app_dir, rel)
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
                     shutil.copy2(src, dest)
-            shutil.rmtree(pending)
-            # Read version from the new OxLog.py and update in memory
-            new_oxlog = os.path.join(app_dir, "OxLog.py")
-            try:
-                with open(new_oxlog, "r", encoding="utf-8") as f:
-                    for line in f:
-                        m = re.match(r'OXLOG_VERSION\s*=\s*"([^"]+)"', line)
-                        if m:
-                            globals()["OXLOG_VERSION"] = m.group(1)
-                            break
-            except Exception:
-                pass
-            # Write flag with notes so the UI shows a splash
-            with open(os.path.join(app_dir, ".updated"), "w", encoding="utf-8") as f:
-                f.write(update_notes or "ok")
-            print("  Update applied successfully.")
+                    copied += 1
+            if copied:
+                # Read version from the new OxLog.py and update in memory
+                new_oxlog = os.path.join(app_dir, "OxLog.py")
+                try:
+                    with open(new_oxlog, "r", encoding="utf-8") as f:
+                        for line in f:
+                            m = re.match(r'OXLOG_VERSION\s*=\s*"([^"]+)"', line)
+                            if m:
+                                globals()["OXLOG_VERSION"] = m.group(1)
+                                break
+                except Exception:
+                    pass
+                # Write flag with notes so the UI shows a splash
+                with open(os.path.join(app_dir, ".updated"), "w", encoding="utf-8") as f:
+                    f.write(update_notes or "ok")
+                print("  Update applied successfully.")
+            # Cleanup failure shouldn't fail an update whose files are already in place
+            if not remove_dir_robust(pending):
+                print(f"  Warning: couldn't remove {pending} - delete it manually.")
         except Exception as e:
             print(f"  Update failed: {e}")
 
