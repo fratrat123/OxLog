@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "files": [
     "OxLog.py",
     "templates/index.html",
@@ -9,5 +9,5 @@
     "install.bat"
   ],
   "base_url": "https://raw.githubusercontent.com/fratrat123/OxLog/main",
-  "notes": "Show Code in history, plugin name validation on paste, help guide overhaul, Push to GitHub, changelog on update splash, settings reorganization"
+  "notes": "Copy button on the Console tab (copies the filtered output), Paste Notes button to fill notes from the clipboard"
 }

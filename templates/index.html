@@ -1624,7 +1624,10 @@
                         </div>
                     </div>
                     <div>
-                        <div class="field-label">Notes</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div class="field-label">Notes</div>
+                            <button class="paste-btn" onclick="pasteNotes()">Paste Notes</button>
+                        </div>
                         <textarea id="notes" placeholder="Describe what changed..."></textarea>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -1718,6 +1721,7 @@
                         <button class="rcon-btn green" id="rconConnectBtn" onclick="rconConnect()">Connect</button>
                         <button class="rcon-btn red" id="rconDisconnectBtn" style="display:none;" onclick="rconDisconnect()">Disconnect</button>
                         <button class="rcon-btn" id="scrollLockBtn" onclick="toggleScrollLock()">Scroll Lock</button>
+                        <button class="rcon-btn" id="consoleCopyBtn" onclick="copyConsole()">Copy</button>
                         <button class="rcon-btn" onclick="clearConsole()">Clear</button>
                     </div>
                 </div>
@@ -2556,6 +2560,23 @@ async function pasteCode() {
   }
 }
 
+async function pasteNotes() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) {
+      showStatus('updateStatus', 'Clipboard is empty.', false);
+      return;
+    }
+    const notesEl = document.getElementById('notes');
+    if (notesEl.value.trim() && !confirm('Replace the current notes with the clipboard contents?')) return;
+    notesEl.value = text.trim();
+    showStatus('updateStatus', 'Notes pasted.', true);
+  } catch (e) {
+    document.getElementById('clipboardHelpOrigin').textContent = window.location.origin;
+    document.getElementById('clipboardHelpModal').style.display = 'flex';
+  }
+}
+
 function closeCodeModal() {
   document.getElementById('codeModal').style.display = 'none';
 }
@@ -3014,6 +3035,35 @@ function toggleScrollLock() {
 function clearConsole() {
   rconMessages = [];
   renderConsole();
+}
+
+// Copies what the main console is currently showing (respects text + type filters)
+function copyConsole() {
+  const filter = document.getElementById('consoleFilter').value.toLowerCase();
+  let filtered = rconMessages;
+  if (rconTypeFilter) filtered = filtered.filter(m => m.type === rconTypeFilter);
+  if (filter) filtered = filtered.filter(m => m.text.toLowerCase().includes(filter));
+  var btn = document.getElementById('consoleCopyBtn');
+  if (!filtered.length) {
+    btn.textContent = 'Nothing to copy';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    return;
+  }
+  var text = filtered.map(function(m) { return m.ts + '  ' + m.text; }).join('\n');
+  var done = function() {
+    btn.textContent = 'Copied ' + filtered.length + ' lines';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+  };
+  navigator.clipboard.writeText(text).then(done).catch(function() {
+    // Fallback for non-HTTPS
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  });
 }
 
 function sendSidebarCmd() {
