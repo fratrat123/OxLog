@@ -2007,7 +2007,7 @@
                 <div class="help-section">
                     <div class="help-section-title">Paste Code Workflow</div>
                     <div class="help-section-body">
-                        Copy your updated plugin code to the clipboard, click <strong style="color:#ccc;">Paste Code</strong>, review the line count comparison, then click <strong style="color:#ccc;">Use This Code</strong>. OxLog validates that the pasted code's <code>[Info]</code> plugin name matches the selected plugin. A green staged bar shows the line count diff. Click <strong style="color:#ccc;">Preview Diff</strong> to see exactly what changed before pushing. When you hit Log &amp; Push, the code is written to the live file, version-stamped, snapshotted with config/data files, and pushed to Discord.
+                        Copy your updated plugin code to the clipboard, click <strong style="color:#ccc;">Paste Code</strong> and the clipboard is staged immediately. OxLog validates that the pasted code's <code>[Info]</code> plugin name matches the selected plugin. A green staged bar shows the line count diff. Click <strong style="color:#ccc;">Preview Diff</strong> to see exactly what changed before pushing. When you hit Log &amp; Push, the code is written to the live file, version-stamped, snapshotted with config/data files, and pushed to Discord.
                     </div>
                 </div>
                 <div class="help-section">
@@ -2530,30 +2530,8 @@ async function pasteCode() {
       showStatus('updateStatus', 'Clipboard is empty.', false);
       return;
     }
-    const newLines = text.split('\n').length;
-    const newChars = text.length;
-    document.getElementById('codePreview').textContent = text;
-    document.getElementById('codeStats').textContent = 'Loading comparison...';
-    document.getElementById('codeModal').style.display = 'flex';
-
-    // Fetch current file for comparison
-    fetch('/api/plugin/code', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ plugin: plugins[selected].name })
-    }).then(r => r.json()).then(d => {
-      let stats = newLines + ' lines \u00b7 ' + newChars.toLocaleString() + ' chars';
-      if (d.ok && d.code) {
-        const curLines = d.code.split('\n').length;
-        const diff = newLines - curLines;
-        const diffStr = diff > 0 ? '+' + diff : diff === 0 ? '\u00b10' : '' + diff;
-        const diffColor = diff > 0 ? '#5a9e5a' : diff < 0 ? '#c87e7e' : '#888';
-        stats = 'Current: ' + curLines + ' lines  \u2192  Pasting: ' + newLines + ' lines  <span style="color:' + diffColor + '">(' + diffStr + ')</span>';
-      }
-      document.getElementById('codeStats').innerHTML = stats;
-    }).catch(function() {
-      document.getElementById('codeStats').textContent = newLines + ' lines \u00b7 ' + newChars.toLocaleString() + ' chars';
-    });
+    // One shot: stage straight away (line-count diff shows in the staged bar)
+    if (stageCode(text)) showStatus('updateStatus', 'Code staged.', true);
   } catch (e) {
     document.getElementById('clipboardHelpOrigin').textContent = window.location.origin;
     document.getElementById('clipboardHelpModal').style.display = 'flex';
@@ -2586,25 +2564,29 @@ function closeClipboardHelp() {
 }
 
 function useThisCode() {
-  pendingCode = document.getElementById('codePreview').textContent;
-  // Validate plugin name matches
+  stageCode(document.getElementById('codePreview').textContent);
+}
+
+// Stages code for Log & Push. Only asks if the [Info] plugin name doesn't match the selected plugin.
+function stageCode(code) {
   if (selected !== null) {
-    var match = pendingCode.match(/\[Info\s*\(\s*"([^"]+)"/);
+    var match = code.match(/\[Info\s*\(\s*"([^"]+)"/);
     if (match) {
       var pastedName = match[1];
       var selectedName = plugins[selected].name;
       if (pastedName.toLowerCase() !== selectedName.toLowerCase()) {
         if (!confirm('Warning: The pasted code is for "' + pastedName + '" but you have "' + selectedName + '" selected.\n\nAre you sure you want to continue?')) {
-          pendingCode = null;
-          return;
+          return false;
         }
       }
     }
   }
+  pendingCode = code;
   const newLines = pendingCode.split('\n').length;
   document.getElementById('stagedBar').classList.add('visible');
   closeCodeModal();
   updateStagedInfo(newLines);
+  return true;
 }
 
 function updateStagedInfo(newLines) {

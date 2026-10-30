@@ -1,5 +1,5 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.3",
   "files": [
     "OxLog.py",
     "templates/index.html",
@@ -9,5 +9,5 @@
     "install.bat"
   ],
   "base_url": "https://raw.githubusercontent.com/fratrat123/OxLog/main",
-  "notes": "Copy button on the Console tab (copies the filtered output), Paste Notes button to fill notes from the clipboard, fix updater failing with \"Access is denied\" when cleaning up the staged update"
+  "notes": "Paste Code is now one click: stages the clipboard straight away with no preview popup (still warns if the [Info] plugin name does not match)"
 }
