@@ -26,7 +26,7 @@ app.secret_key = get_secret_key()
 CONFIG_FILE = "config.json"
 LOG_FILE = "plugin_changelog.txt"
 VERSIONS_DIR = "versions"
-OXLOG_VERSION = "1.2.3"
+OXLOG_VERSION = "1.3.0"
 UPDATE_URL = "https://raw.githubusercontent.com/fratrat123/OxLog/main/version.json"
 
 DEFAULT_CONFIG = {
@@ -47,7 +47,9 @@ DEFAULT_CONFIG = {
     "tutorial_complete": False,
     "update_url": "",
     "unc_base": "",
-    "local_base": ""
+    "local_base": "",
+    "agent_watcher": True,
+    "agent_api": True
 }
 
 def load_config():
@@ -215,6 +217,10 @@ def snapshot_plugin(plugin_dir, plugin_file, plugin_name, version, update_type, 
         return snapshot_dir
     except Exception:
         return None
+
+from agent import Agent
+agent = Agent(load_config, get_versions_dir, parse_plugin_info)
+agent.register_routes(app)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -387,7 +393,9 @@ def get_settings():
         "rcon_password": config.get("rcon_password", ""),
         "update_url": config.get("update_url", ""),
         "unc_base": config.get("unc_base", ""),
-        "local_base": config.get("local_base", "")
+        "local_base": config.get("local_base", ""),
+        "agent_watcher": config.get("agent_watcher", True),
+        "agent_api": config.get("agent_api", True)
     })
 
 @app.route("/api/settings", methods=["POST"])
@@ -424,6 +432,10 @@ def save_settings():
         config["unc_base"] = data["unc_base"]
     if "local_base" in data:
         config["local_base"] = data["local_base"]
+    if "agent_watcher" in data:
+        config["agent_watcher"] = bool(data["agent_watcher"])
+    if "agent_api" in data:
+        config["agent_api"] = bool(data["agent_api"])
     save_config(config)
     return jsonify({"ok": True})
 
@@ -497,6 +509,7 @@ def log_update():
 
     snap_dir = None
     if plugin_file:
+        agent.suppress_file(plugin_file)
         filepath = os.path.join(plugin_dir, plugin_file)
         code = data.get("code")
         if code:
@@ -508,6 +521,7 @@ def log_update():
                 pass
         update_version_in_file(filepath, version_list)
         snap_dir = snapshot_plugin(plugin_dir, plugin_file, plugin_name, version_list, update_type, notes, ts)
+        agent.release(plugin_file, version_str)
 
     save_config(config)
 
@@ -623,6 +637,7 @@ def revert():
 
     # Restore snapshot to live
     oxide_root = os.path.dirname(plugin_dir)
+    agent.suppress_file(plugin_file)
     try:
         shutil.copy2(snapshot_src, live_path)
         # Restore config files
@@ -654,6 +669,7 @@ def revert():
 
     # Snapshot the reverted state
     snapshot_plugin(plugin_dir, plugin_file, plugin_name, version_list, "Revert", "Reverted to " + version_str, ts)
+    agent.note_revert(plugin_file, version_str)
 
     save_config(config)
 
@@ -728,7 +744,10 @@ def history():
                             "folder": folder,
                             "notes": notes_content
                         })
-    return jsonify(list(reversed(entries)))
+    entries.extend(agent.history_entries(plugin))
+    # Changelog timestamps are "YYYY-MM-DD HH:MM:SS", so string order is time order
+    entries.sort(key=lambda e: e["ts"], reverse=True)
+    return jsonify(entries)
 
 @app.route("/api/search", methods=["POST"])
 def search_plugins():
@@ -1069,7 +1088,7 @@ def archive():
     backup_path = os.path.join(backup_base, backup_name)
     try:
         os.makedirs(backup_path, exist_ok=True)
-        for item in [CONFIG_FILE, LOG_FILE, "OxLog.py", "start.bat", "install.bat"]:
+        for item in [CONFIG_FILE, LOG_FILE, "OxLog.py", "agent.py", "subversions.json", "start.bat", "install.bat"]:
             if os.path.exists(item):
                 shutil.copy2(item, backup_path)
         if os.path.isdir("templates"):
@@ -1371,9 +1390,13 @@ if __name__ == "__main__":
     print(f"    http://localhost:5000")
     print(f"    http://{local_ip}:5000\n")
 
+    agent.start()
+    print(f"  Agent mode: watcher {'on' if load_config().get('agent_watcher', True) else 'off'}, key in .agent_key\n")
+
     try:
         from waitress import serve
-        serve(app, host="0.0.0.0", port=5000, threads=4)
+        # Extra threads: /api/agent/status long-polls while waiting on a compile
+        serve(app, host="0.0.0.0", port=5000, threads=8)
     except ImportError:
         print("  (Waitress not found, using Flask dev server)")
         app.run(host="0.0.0.0", port=5000, debug=False)

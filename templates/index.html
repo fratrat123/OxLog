@@ -474,6 +474,71 @@
             margin-top: 4px;
         }
 
+        .log-entry.sub {
+            margin-left: 16px;
+            border-style: dashed;
+        }
+
+        .log-source {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            background: #1a1a2a;
+            color: #7a7ac8;
+            border: 0.5px solid #2a2a3a;
+        }
+
+        .compile-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: 0.5px solid #2a2a2a;
+            color: #666;
+        }
+
+            .compile-badge.ok { color: #7ec87e; border-color: #2a3a2a; background: #1a2a1a; }
+            .compile-badge.error { color: #c87e7e; border-color: #3a2a2a; background: #2a1a1a; }
+            .compile-badge.pending { color: #c8c87e; border-color: #3a3a2a; }
+
+        .compile-msg {
+            font-family: Consolas, monospace;
+            font-size: 11px;
+            color: #c87e7e;
+            margin-top: 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .live-feed {
+            background: #0d0d0d;
+            border: 0.5px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-family: Consolas, monospace;
+            font-size: 11px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+            .live-feed .ev { color: #666; padding: 1px 0; }
+            .live-feed .ev .t { color: #3a3a3a; margin-right: 8px; }
+            .live-feed .ev.version { color: #7a7ac8; }
+            .live-feed .ev.compiled, .live-feed .ev.loaded, .live-feed .ev.release { color: #7ec87e; }
+            .live-feed .ev.compile_error, .live-feed .ev.runtime_error { color: #c87e7e; }
+            .live-feed .ev.revert { color: #c8c87e; }
+
+        .tab.has-activity::after {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #7a7ac8;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
         .empty {
             color: #333;
             font-size: 13px;
@@ -1697,6 +1762,8 @@
             </div>
 
             <div class="panel" id="panel-history">
+                <div class="field-label">Live activity</div>
+                <div class="live-feed" id="liveFeed"><div class="ev">Waiting for changes...</div></div>
                 <div id="historyContent"><div class="empty">No updates logged yet.</div></div>
             </div>
 
@@ -1825,6 +1892,14 @@
                                 <a href="/api/remote/installer" class="secondary-btn" style="text-decoration:none;padding:6px 12px;font-size:11px;display:inline-block;">Download Remote Setup</a>
                                 <span style="font-size:10px;color:#333;">Run once on each remote PC</span>
                             </div>
+                        </div>
+                    </div>
+                    <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:10px;">Agent Mode <span style="color:#333;font-size:9px;">(Claude editing plugins directly)</span></div>
+                        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:#888;">
+                            <label><input type="checkbox" id="settingsAgentWatcher" /> Watch plugin folder &mdash; record every change as a sub-version</label>
+                            <label><input type="checkbox" id="settingsAgentApi" /> Allow Claude's API key (backups before writes, compile status)</label>
+                            <div style="font-size:10px;color:#333;">Key file: OxLog\.agent_key &mdash; delete it and restart OxLog to issue a new one.</div>
                         </div>
                     </div>
                     <div style="border-top:0.5px solid #2a2a2a;padding-top:14px;margin-top:4px;">
@@ -2212,7 +2287,7 @@ function selectPlugin(i) {
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+tab));
-  if (tab === 'history') loadHistory();
+  if (tab === 'history') { loadHistory(); document.getElementById('tabHistory').classList.remove('has-activity'); }
   if (tab === 'console') updateRconPluginActions();
   if (tab === 'settings') loadSettings();
   if (tab === 'editor') { loadEditorCode(); if (aceEditor) setTimeout(function() { aceEditor.resize(); }, 50); }
@@ -2358,14 +2433,16 @@ function loadHistory() {
             const el = document.getElementById('historyContent');
             if (!entries.length) { el.innerHTML = '<div class="empty">No updates logged yet.</div>'; return; }
             el.innerHTML = entries.map(e => `
-<div class="log-entry">
+<div class="log-entry${e.sub ? ' sub' : ''}">
     <div class="log-plugin">${e.plugin}</div>
     <div class="log-head">
     <span class="log-ver">${e.version}</span>
     <span class="log-type">${e.type}</span>
+    ${e.sub ? subVersionBadges(e) : ''}
     <span class="log-ts">${e.ts}</span>
     </div>
-    ${e.notes ? `<div style="font-size:12px;color:#666;margin-top:6px;line-height:1.5;">${e.notes}</div>` : ''}
+    ${e.sub && e.compile && e.compile.status === 'error' ? `<div class="compile-msg">${escapeHtml(e.compile.msg || '')}</div>` : ''}
+    ${e.notes ? `<div style="font-size:12px;color:#666;margin-top:6px;line-height:1.5;">${e.sub ? escapeHtml(e.notes) : e.notes}</div>` : ''}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
         <div class="log-folder" style="cursor:pointer;margin:0;" onclick="openSnapshot('${e.folder.replace(/\\/g, '\\\\')}')">open snapshot folder</div>
         <div style="display:flex;gap:6px;">
@@ -2377,6 +2454,50 @@ function loadHistory() {
 </div>`).join('');
         });
 }
+
+function subVersionBadges(e) {
+  const c = e.compile || {};
+  let badge = '';
+  if (c.status === 'ok') badge = `<span class="compile-badge ok">✓ compiled${c.loaded ? ' · loaded v' + escapeHtml(c.loaded) : ''}</span>`;
+  else if (c.status === 'error') badge = '<span class="compile-badge error">✗ compile failed</span>';
+  else if (c.status === 'pending') badge = '<span class="compile-badge pending">compiling…</span>';
+  else if (c.status === 'unknown') badge = '<span class="compile-badge">no compile seen</span>';
+  if (e.runtime_errors) badge += ` <span class="compile-badge error">${e.runtime_errors} runtime error${e.runtime_errors > 1 ? 's' : ''}</span>`;
+  const src = e.type === 'Claude' ? '<span class="log-source">Claude</span>' : '';
+  return src + badge;
+}
+
+// Live activity: poll the agent event feed and refresh History when something changes
+let agentEventId = null;
+let historyRefreshTimer = null;
+function pollAgentEvents() {
+  fetch('/api/agent/events?since=' + (agentEventId || 0)).then(r => r.json()).then(d => {
+    if (!d.ok) return;
+    const first = agentEventId === null;
+    agentEventId = d.last_id;
+    if (!d.events.length) return;
+    const feed = document.getElementById('liveFeed');
+    if (feed.dataset.started !== '1') { feed.innerHTML = ''; feed.dataset.started = '1'; }
+    d.events.forEach(ev => {
+      const row = document.createElement('div');
+      row.className = 'ev ' + ev.kind;
+      row.innerHTML = '<span class="t">' + escapeHtml(ev.ts.slice(11)) + '</span>' + escapeHtml(ev.text);
+      feed.appendChild(row);
+    });
+    while (feed.children.length > 100) feed.removeChild(feed.firstChild);
+    feed.scrollTop = feed.scrollHeight;
+    if (first) return;
+    const historyTab = document.getElementById('tabHistory');
+    if (historyTab.classList.contains('active')) {
+      clearTimeout(historyRefreshTimer);
+      historyRefreshTimer = setTimeout(loadHistory, 300);
+    } else {
+      historyTab.classList.add('has-activity');
+    }
+  }).catch(() => {});
+}
+setInterval(pollAgentEvents, 2000);
+pollAgentEvents();
 
 function showSnapshotCode(pluginName, folder) {
   // Find the plugin's .cs filename
@@ -3195,6 +3316,8 @@ function loadSettings() {
     document.getElementById('settingsUpdateUrl').value = d.update_url || '';
     document.getElementById('settingsUncBase').value = d.unc_base || '';
     document.getElementById('settingsLocalBase').value = d.local_base || '';
+    document.getElementById('settingsAgentWatcher').checked = d.agent_watcher !== false;
+    document.getElementById('settingsAgentApi').checked = d.agent_api !== false;
     remoteUncBase = d.unc_base || '';
     remoteLocalBase = d.local_base || '';
   });
@@ -3215,6 +3338,8 @@ function saveSettings() {
   data.update_url = document.getElementById('settingsUpdateUrl').value.trim();
   data.unc_base = document.getElementById('settingsUncBase').value.trim();
   data.local_base = document.getElementById('settingsLocalBase').value.trim();
+  data.agent_watcher = document.getElementById('settingsAgentWatcher').checked;
+  data.agent_api = document.getElementById('settingsAgentApi').checked;
   fetch('/api/settings', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
